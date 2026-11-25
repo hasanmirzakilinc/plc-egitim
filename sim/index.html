@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ladder Simülatörü – Konveyör Hattı</title>
+<style>
+:root{--bg:#14181d;--panel:#1d232a;--panel2:#252d36;--line:#36414d;--txt:#e6ebf0;--mut:#8d9aa8;--grn:#22c55e;--red:#ef4444;--yel:#facc15;--blu:#3b82f6;--acc:#f59e0b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:#0f1216;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{font-size:16px;margin:0 12px 0 0;letter-spacing:.3px}
+header h1 span{color:var(--acc)}
+button,select,input{font:inherit;color:var(--txt);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+button{cursor:pointer}button:hover{border-color:#5a6878}
+.run{background:#14532d;border-color:#22c55e;font-weight:700}.run.off{background:#5b1a1a;border-color:#ef4444}
+.pill{font-size:12px;color:var(--mut)}
+main{padding:14px 16px;display:grid;gap:14px;grid-template-columns:minmax(0,1fr) 300px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);margin:0 0 10px}
+#sceneWrap{grid-column:1}
+canvas{width:100%;display:block;border-radius:8px;background:#232a31}
+.panelRow{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;margin-top:12px}
+.pb{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--mut);user-select:none}
+.pbtn{width:54px;height:54px;border-radius:50%;border:4px solid #50575f;box-shadow:0 4px 0 #0a0c0e,inset 0 -6px 10px rgba(0,0,0,.35);cursor:pointer;transition:transform .05s}
+.pbtn.down{transform:translateY(3px);box-shadow:0 1px 0 #0a0c0e,inset 0 -2px 6px rgba(0,0,0,.4);filter:brightness(1.25)}
+.g{background:#16a34a}.r{background:#dc2626}.b{background:#2563eb}
+.estop{width:64px;height:64px;background:radial-gradient(circle at 40% 35%,#ff6b6b,#b91c1c 60%);border:6px solid #facc15}
+.estop.down{filter:brightness(.8);transform:translateY(4px)}
+.sel{width:54px;height:54px;border-radius:50%;background:#222;border:4px solid #50575f;position:relative;cursor:pointer}
+.sel i{position:absolute;left:50%;top:50%;width:10px;height:40px;margin:-20px 0 0 -5px;background:#ddd;border-radius:4px;transition:transform .15s;transform:rotate(-40deg)}
+.sel.on i{transform:rotate(40deg)}
+.lamp{width:30px;height:30px;border-radius:50%;border:3px solid #444;opacity:.25}
+.lamp.on{opacity:1;box-shadow:0 0 16px currentColor}
+.side{grid-column:2;grid-row:1 / span 2;display:flex;flex-direction:column;gap:14px}
+.tags{display:grid;grid-template-columns:auto 1fr auto;gap:3px 8px;font-size:12px;align-items:center}
+.tags .ad{font-family:ui-monospace,Consolas,monospace;color:var(--mut)}
+.led{width:12px;height:12px;border-radius:50%;background:#333;border:1px solid #555}
+.led.on{background:var(--grn);box-shadow:0 0 6px var(--grn)}
+.tc{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+#ladderCard{grid-column:1}
+.rung{border:1px solid #c9d2db;border-radius:6px;background:#fbfcfd;margin-bottom:10px;color:#1c2833;overflow-x:auto}
+.rhead{display:flex;gap:6px;align-items:center;background:#e9eef3;padding:4px 8px;border-bottom:1px solid #c9d2db;font-size:12px}
+.rhead b{white-space:nowrap}
+.rhead input{flex:1;min-width:120px;background:#fff;color:#1c2833;border:1px solid #c9d2db;padding:3px 6px;font-size:12px}
+.rhead button{background:#fff;color:#1c2833;border-color:#c9d2db;padding:2px 7px;font-size:12px}
+svg.lad{display:block}
+.palette{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.palette button{font-family:ui-monospace,Consolas,monospace;font-size:13px;padding:5px 9px}
+.palette button.act{background:#1e3a5f;border-color:var(--blu)}
+.toolbar{position:sticky;top:58px;z-index:4;background:var(--panel);padding:6px 0 8px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+.toolbar .palette{margin-bottom:8px}
+#props{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:38px;font-size:13px}
+#props label{font-size:12px;color:var(--mut)}
+#props select{min-width:230px;font-size:14px;border-color:var(--blu);background:#14243a}
+#props input{width:80px}
+#props .nm{font-weight:700;color:var(--acc)}
+details summary{cursor:pointer;color:var(--acc);font-weight:600}
+details p,details li{color:#c4ccd5;font-size:13px}
+kbd{background:#333;border-radius:3px;padding:0 4px;font-size:12px}
+.statbar{display:flex;gap:16px;font-size:12px;color:var(--mut);margin-top:6px;flex-wrap:wrap}
+@media (max-width:1000px){main{grid-template-columns:1fr}.side{grid-column:1;grid-row:auto}}
+</style>
+</head>
+<body>
+<header>
+  <a href="../index.html" style="color:var(--mut);text-decoration:none;font-size:13px">← Yazılar</a>
+  <h1>Ladder <span>Simülatörü</span></h1>
+  <button id="runBtn" class="run">▶ PLC RUN</button>
+  <button id="resetMem" title="Tüm bitleri, zamanlayıcı ve sayıcıları sıfırla">⟲ Hafızayı sıfırla</button>
+  <select id="exSel"></select>
+  <button id="exportBtn">⇄ Programı dışa/içe aktar</button>
+  
+  <span class="pill" id="scanInfo">Tarama: 50 ms</span>
+</header>
+
+<main>
+  <section class="card" id="sceneWrap">
+    <h2>Saha – Konveyör & Piston Ayırma Hattı</h2>
+    <canvas id="cv" width="760" height="300"></canvas>
+    <div class="statbar"><span id="stats"></span></div>
+    <div class="panelRow">
+      <div class="pb"><div class="pbtn g" id="bStart"></div>START<br>I0.0 (NO)</div>
+      <div class="pb"><div class="pbtn r" id="bStop"></div>STOP<br>I0.1 (NC)</div>
+      <div class="pb"><div class="pbtn estop" id="bEstop"></div>ACİL STOP<br>I0.2 (NC)</div>
+      <div class="pb"><div class="pbtn b" id="bReset"></div>RESET<br>I1.0 (NO)</div>
+      <div class="pb"><div class="sel on" id="bSel"><i></i></div><span id="selTxt">OTO</span>I1.1</div>
+      <div class="pb"><div class="lamp" id="lG" style="color:#22c55e;background:#22c55e"></div>Q0.3</div>
+      <div class="pb"><div class="lamp" id="lY" style="color:#facc15;background:#facc15"></div>Q0.5</div>
+      <div class="pb"><div class="lamp" id="lR" style="color:#ef4444;background:#ef4444"></div>Q0.4</div>
+      <div style="flex:1"></div>
+      <div class="pb" style="gap:6px">
+        <button id="addShort">+ Normal kutu</button>
+        <button id="addTall">+ Uzun kutu</button>
+        <button id="clearScene">Sahneyi temizle</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="side">
+    <section class="card">
+      <h2>Canlı değişken tablosu</h2>
+      <div class="tags" id="tagTbl"></div>
+      <div id="tcTbl" class="tc" style="margin-top:10px"></div>
+    </section>
+    <section class="card">
+      <details open>
+        <summary>Nasıl kullanılır?</summary>
+        <ul style="padding-left:18px;margin:8px 0">
+          <li>Hücreye tıkla → paletten eleman seç (NO, NC, TON…) → paletin altındaki <b>Adres ▸</b> listesinden I0.1 STOP gibi adresini seç.</li>
+          <li>Sağdaki son sütun <b>bobin</b> sütunudur: ( ), (S), (R).</li>
+          <li>Paralel dal: <b>＋Satır</b> ile satır ekle, satırlar arasındaki küçük <b>noktalara</b> tıklayıp dikey bağlantı kur. Sol raya bağlamak için en soldaki noktayı kullan.</li>
+          <li><b>STOP ve ACİL STOP NC kablolu</b> (Factory IO'daki gibi): basılı değilken 1 gelir, programda <b>NO kontak</b> ile oku.</li>
+          <li>PLC RUN'dayken programı değiştirebilirsin; değişiklik bir sonraki taramada devreye girer.</li>
+          <li><kbd>Del</kbd> seçili hücreyi siler. Program tarayıcıda otomatik kaydedilir.</li>
+        </ul>
+      </details>
+      <details>
+        <summary>Alıştırmalar</summary>
+        <ol style="padding-left:18px;margin:8px 0">
+          <li>Start-Stop mühürlemeyi boş programdan kendin kur.</li>
+          <li>START'a basınca konveyör 5 sn sonra kalksın (TON).</li>
+          <li>OTO/MAN anahtarı MAN'dayken besleyici çalışmasın.</li>
+          <li>Uzun kutu ayırmayı yap, 5 kutuda bir konveyör dursun, RESET'le devam etsin.</li>
+          <li>Hatalı ayrım olunca (normal kutu itilirse) kırmızı lamba yanıp sönsün.</li>
+        </ol>
+      </details>
+    </section>
+  </aside>
+
+  <section class="card" id="ladderCard">
+    <h2>Ladder (LAD) programı – OB1</h2>
+    <div class="toolbar">
+      <div class="palette" id="palette"></div>
+      <div id="props"><span class="pill">Ladder'da bir hücreye tıkla.</span></div>
+    </div>
+    <div id="rungs"></div>
+    <button id="addRung">＋ Network ekle</button>
+  </section>
+</main>
+
+<div id="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;align-items:center;justify-content:center">
+ <div class="card" style="width:min(640px,94vw)">
+  <h2>Programı dışa / içe aktar</h2>
+  <p class="pill" style="margin:0 0 8px">Kopyala ile programı not defterine kaydet. Daha sonra metni buraya yapıştırıp “Yükle” de, ya da .json dosyası seç.</p>
+  <textarea id="jsonTa" style="width:100%;height:240px;font:12px ui-monospace,Consolas,monospace;background:#11151a;color:#e6ebf0;border:1px solid var(--line);border-radius:6px;padding:8px"></textarea>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center">
+   <button id="copyBtn">Kopyala</button><button id="loadBtn">Yükle</button>
+   <input type="file" id="fileIn" accept=".json,.txt">
+   <span id="mMsg" class="pill"></span><span style="flex:1"></span><button id="closeM">Kapat</button>
+  </div>
+ </div>
+</div>
+<script>
+// ===== LADDER MOTORU + SAHNE MODELİ =====
+const L = 6; // mantık sütunu sayısı (sonra bobin sütunu gelir)
+
+const TAGLIST = [
+  ['I0.0','START','Start butonu (NO)'],
+  ['I0.1','STOP','Stop butonu (NC kablolu: basılı değilken 1)'],
+  ['I0.2','ACIL_STOP','Acil stop (NC kablolu: basılı değilken 1)'],
+  ['I0.3','SNS_GIRIS','Giriş fotoseli'],
+  ['I0.4','SNS_YUKSEK','Yükseklik sensörü (sadece uzun kutu)'],
+  ['I0.5','SNS_PISTON','Piston önü fotoseli'],
+  ['I0.6','PST_ILERI','Piston ileri limit'],
+  ['I0.7','PST_GERI','Piston geri limit'],
+  ['I1.0','RESET','Reset butonu (NO)'],
+  ['I1.1','OTO_MAN','Seçici anahtar (1 = OTO)'],
+  ['Q0.0','KONVEYOR','Konveyör motoru'],
+  ['Q0.1','PISTON','Piston ileri valfi'],
+  ['Q0.2','BESLEYICI','Kutu besleyici (yükselen kenarda 1 kutu)'],
+  ['Q0.3','L_YESIL','Yeşil lamba'],
+  ['Q0.4','L_KIRMIZI','Kırmızı lamba'],
+  ['Q0.5','L_SARI','Sarı lamba'],
+  ['Q0.6','KORNA','Korna'],
+];
+for (let b = 0; b < 2; b++) for (let i = 0; i < 8; i++) TAGLIST.push([`M${b}.${i}`, '', 'Hafıza biti']);
+for (let i = 0; i < 8; i++) TAGLIST.push([`T${i}`, '', 'Zamanlayıcı']);
+for (let i = 0; i < 4; i++) TAGLIST.push([`C${i}`, '', 'Sayıcı']);
+const SYM = Object.fromEntries(TAGLIST.map(t => [t[0], t[1]]));
+
+const CONTACTS = ['NO', 'NC', 'P', 'N'];
+const BLOCKS = ['TON', 'TOF', 'CTU'];
+const COILS = ['OUT', 'S', 'R'];
+
+function newState() { return { bits: {}, T: {}, C: {}, edge: {} }; }
+function getT(st, a) { return st.T[a] || (st.T[a] = { et: 0, pt: 0, q: false }); }
+function getC(st, a) { return st.C[a] || (st.C[a] = { cv: 0, pv: 0, q: false }); }
+function readBit(st, a) {
+  if (!a) return false;
+  if (a[0] === 'T') return !!(st.T[a] && st.T[a].q);
+  if (a[0] === 'C') return !!(st.C[a] && st.C[a].q);
+  return !!st.bits[a];
+}
+
+function newRung(comment = '') {
+  return { comment, cells: [Array(L).fill(null)], coils: [null], links: [] };
+}
+function hasLink(rung, k, r) { return rung.links.includes(k + ':' + r); }
+
+// Satırdaki boş hücre kablo sayılır mı? (Satır 0: hep evet. Alt satırlar: dal bağlantıları arasında)
+function wireRange(rung, r) {
+  if (r === 0) return [0, L];
+  let mn = Infinity, mx = -Infinity;
+  for (let k = 0; k <= L; k++) if (hasLink(rung, k, r - 1) || hasLink(rung, k, r)) { mn = Math.min(mn, k); mx = Math.max(mx, k); }
+  if (rung.coils[r]) mx = L;
+  if (mn === Infinity) return [0, 0];
+  return [mn, mx];
+}
+
+function evalRung(rung, st, dt, ri) {
+  const rows = rung.cells.length;
+  const N = Array.from({ length: rows }, () => Array(L + 1).fill(false));
+  const info = Array.from({ length: rows }, () => Array(L).fill(null));
+  const merge = (k) => {
+    let r = 0;
+    while (r < rows) {
+      let e = r; while (e < rows - 1 && hasLink(rung, k, e)) e++;
+      if (e > r) { let v = false; for (let i = r; i <= e; i++) v = v || N[i][k]; for (let i = r; i <= e; i++) N[i][k] = v; }
+      r = e + 1;
+    }
+  };
+  for (let r = 0; r < rows; r++) N[r][0] = (r === 0);
+  merge(0);
+  const ranges = Array.from({ length: rows }, (_, r) => wireRange(rung, r));
+  for (let k = 0; k < L; k++) {
+    for (let r = 0; r < rows; r++) {
+      const cell = rung.cells[r][k], pin = N[r][k];
+      let out = false, closed = false;
+      if (!cell) { const [a, b] = ranges[r]; out = (k >= a && k < b) ? pin : false; }
+      else {
+        const key = ri + ':' + r + ':' + k;
+        switch (cell.t) {
+          case 'W': out = pin; break;
+          case 'NO': closed = readBit(st, cell.a); out = pin && closed; break;
+          case 'NC': closed = !readBit(st, cell.a); out = pin && closed; break;
+          case 'P': { const cur = readBit(st, cell.a), prev = !!st.edge[key]; st.edge[key] = cur; closed = cur && !prev; out = pin && closed; break; }
+          case 'N': { const cur = readBit(st, cell.a), prev = !!st.edge[key]; st.edge[key] = cur; closed = !cur && prev; out = pin && closed; break; }
+          case 'TON': { const t = getT(st, cell.a), pt = (cell.pt || 0) * 1000; t.pt = pt;
+            if (pin) t.et = Math.min(t.et + dt * 1000, pt); else t.et = 0;
+            t.q = pin && t.et >= pt; out = t.q; break; }
+          case 'TOF': { const t = getT(st, cell.a), pt = (cell.pt || 0) * 1000; t.pt = pt;
+            if (pin) { t.q = true; t.et = 0; } else if (t.q) { t.et = Math.min(t.et + dt * 1000, pt); if (t.et >= pt) t.q = false; }
+            out = t.q; break; }
+          case 'CTU': { const c = getC(st, cell.a); c.pv = cell.pv || 0; const prev = !!st.edge[key]; st.edge[key] = pin;
+            if (pin && !prev) c.cv++; c.q = c.cv >= c.pv; out = c.q; break; }
+        }
+      }
+      N[r][k + 1] = out; info[r][k] = { pin, out, closed };
+    }
+    merge(k + 1);
+  }
+  for (let r = 0; r < rows; r++) {
+    const coil = rung.coils[r]; if (!coil || !coil.a) continue;
+    const p = N[r][L], a = coil.a;
+    if (coil.t === 'OUT') { if (a[0] !== 'T' && a[0] !== 'C') st.bits[a] = p; }
+    else if (coil.t === 'S') { if (p && a[0] !== 'T' && a[0] !== 'C') st.bits[a] = true; }
+    else if (coil.t === 'R') { if (p) { if (a[0] === 'T') { const t = getT(st, a); t.et = 0; t.q = false; } else if (a[0] === 'C') { const c = getC(st, a); c.cv = 0; c.q = false; } else st.bits[a] = false; } }
+  }
+  return { N, info };
+}
+
+function scan(prog, st, dt) { return prog.map((r, i) => evalRung(r, st, dt, i)); }
+
+// ===== SAHNE (konveyör hattı) =====
+const BELT = { x0: 70, x1: 690, y: 120, h: 60 };
+const S_ENTRY = 140, S_HEIGHT = 330, S_PUSH = 540, PUSH_HALF = 36, BOX = 40;
+
+function newScene() { return { boxes: [], p: 0, sorted: 0, normal: 0, wrong: 0, missed: 0, prevFeed: false, phase: 0, id: 1, motorAng: 0, tallNext: [] }; }
+function boxTop(b) { return BELT.y + (BELT.h - BOX) / 2 + b.dy; }
+function spawnBox(sc, tall) {
+  if (sc.boxes.some(b => b.st === 'belt' && b.x < BELT.x0 + BOX + 8)) return false;
+  if (tall === undefined) tall = sc.tallNext.length ? sc.tallNext.shift() : Math.random() < 0.4;
+  sc.boxes.push({ id: sc.id++, x: BELT.x0, dy: 0, tall, st: 'belt', t: 0 });
+  return true;
+}
+function stepScene(sc, out, dt) {
+  const v = out['Q0.0'] ? 90 : 0;
+  sc.phase += v * dt; if (out['Q0.0']) sc.motorAng += dt * 10;
+  sc.p = Math.max(0, Math.min(1, sc.p + (out['Q0.1'] ? 1 : -1) * dt / 0.45));
+  const headY = BELT.y - 16 + sc.p * (BELT.h + 26);
+  sc.headY = headY;
+  if (out['Q0.2'] && !sc.prevFeed) spawnBox(sc);
+  sc.prevFeed = !!out['Q0.2'];
+  const belt = sc.boxes.filter(b => b.st === 'belt').sort((a, b) => b.x - a.x);
+  for (let i = 0; i < belt.length; i++) {
+    const b = belt[i];
+    const under = b.x + BOX > S_PUSH - PUSH_HALF && b.x < S_PUSH + PUSH_HALF;
+    if (under && headY > boxTop(b)) {
+      b.dy = headY - (BELT.y + (BELT.h - BOX) / 2);
+      if (b.dy > (BELT.h + BOX) / 2) { b.st = 'chute'; b.t = 0; }
+      continue;
+    }
+    let nx = b.x + v * dt;
+    const ahead = belt.slice(0, i).filter(a => a.st === 'belt' && a.x > b.x && Math.abs(a.dy - b.dy) < BOX).pop();
+    if (ahead) nx = Math.min(nx, ahead.x - BOX - 4);
+    if (nx > b.x) b.x = nx;
+    if (b.x > BELT.x1 - 6) { b.st = 'end'; b.t = 0; if (b.tall) sc.missed++; else sc.normal++; }
+  }
+  for (const b of sc.boxes) {
+    if (b.st === 'chute') { b.t += dt; b.dy += 140 * dt; if (b.t > 0.55) { b.st = 'gone'; if (b.tall) sc.sorted++; else sc.wrong++; } }
+    else if (b.st === 'end') { b.t += dt; b.x += 70 * dt; if (b.t > 0.5) b.st = 'gone'; }
+  }
+  sc.boxes = sc.boxes.filter(b => b.st !== 'gone');
+}
+function covers(b, x) { return b.x <= x && x <= b.x + BOX; }
+function sceneInputs(sc) {
+  const onBelt = sc.boxes.filter(b => b.st === 'belt');
+  return {
+    'I0.3': onBelt.some(b => covers(b, S_ENTRY) && b.dy < 10),
+    'I0.4': onBelt.some(b => b.tall && covers(b, S_HEIGHT) && b.dy < 10),
+    'I0.5': onBelt.some(b => covers(b, S_PUSH) && b.dy < 6),
+    'I0.6': sc.p >= 0.97,
+    'I0.7': sc.p <= 0.03,
+  };
+}
+
+// ===== ÖRNEK PROGRAMLAR =====
+function R(comment, rows, coils, links) {
+  const rung = newRung(comment);
+  rung.cells = rows.map(row => { const a = Array(L).fill(null); row.forEach((c, i) => { if (c) a[i] = c; }); return a; });
+  rung.coils = coils.slice(0, rows.length); while (rung.coils.length < rows.length) rung.coils.push(null);
+  rung.links = links || [];
+  return rung;
+}
+const no = a => ({ t: 'NO', a }), nc = a => ({ t: 'NC', a });
+const out = a => ({ t: 'OUT', a }), set = a => ({ t: 'S', a }), rst = a => ({ t: 'R', a });
+
+const SEAL = () => R('Start-Stop mühürleme: START basınca konveyör çalışır, kendini tutar. STOP ve ACİL NC olduğu için NO kontakla okunur.',
+  [[no('I0.0'), no('I0.1'), no('I0.2')], [no('Q0.0')]], [out('Q0.0')], ['0:0', '1:0']);
+
+const EXAMPLES = {
+  bos: { name: 'Boş program', prog: () => [newRung()] },
+  seal: { name: '1) Start-Stop mühürleme', prog: () => [
+    SEAL(),
+    R('Konveyör çalışırken yeşil lamba', [[no('Q0.0')]], [out('Q0.3')]),
+    R('Konveyör dururken kırmızı lamba', [[nc('Q0.0')]], [out('Q0.4')]),
+  ] },
+  feed: { name: '2) Zamanlayıcıyla kutu besleme', prog: () => [
+    SEAL(),
+    R('T0 kendini sıfırlayan zamanlayıcı: her 3 sn bir tarama boyunca 1 olur', [[no('Q0.0'), nc('T0'), { t: 'TON', a: 'T0', pt: 3 }]], [null]),
+    R('T0 dolunca besleyiciye bir darbe → 1 kutu', [[no('T0')]], [out('Q0.2')]),
+    R('Konveyörde kutu varken (giriş sensörü) sarı lamba 1 sn yanık kalsın', [[no('I0.3'), { t: 'TOF', a: 'T1', pt: 1 }]], [out('Q0.5')]),
+    R('Yeşil lamba', [[no('Q0.0')]], [out('Q0.3')]),
+    R('Kırmızı lamba', [[nc('Q0.0')]], [out('Q0.4')]),
+  ] },
+  sort: { name: '3) Uzun kutu ayırma + sayıcı', prog: () => [
+    SEAL(),
+    R('Her 3 sn bir kutu besle (T0 osilatör)', [[no('Q0.0'), nc('T0'), { t: 'TON', a: 'T0', pt: 3 }]], [null]),
+    R('Besleyici darbesi', [[no('T0')]], [out('Q0.2')]),
+    R('Yükseklik sensörü uzun kutu gördü → M0.1 hafızaya al', [[no('I0.4')]], [set('M0.1')]),
+    R('Uzun kutu piston önüne geldi ve piston gerideyse → piston ileri', [[no('M0.1'), no('I0.5'), no('I0.7')]], [set('Q0.1')]),
+    R('Piston ileri limite gelince geri çek, hafızayı sil', [[no('I0.6')], []], [rst('Q0.1'), rst('M0.1')], ['6:0']),
+    R('Ayrılan kutuları say: 5 olunca sarı lamba', [[no('I0.6'), { t: 'CTU', a: 'C0', pv: 5 }]], [out('Q0.5')]),
+    R('RESET butonu sayıcıyı sıfırlar', [[no('I1.0')]], [rst('C0')]),
+    R('Yeşil lamba', [[no('Q0.0')]], [out('Q0.3')]),
+    R('Kırmızı lamba', [[nc('Q0.0')]], [out('Q0.4')]),
+    R('Acil stop basılıysa korna', [[nc('I0.2')]], [out('Q0.6')]),
+  ] },
+};
+
+if (typeof module !== 'undefined') module.exports = { L, scan, newState, newScene, stepScene, sceneInputs, spawnBox, EXAMPLES, newRung, wireRange, readBit };
+
+</script>
+<script>
+// ===== DURUM =====
+const LS_KEY = 'ladsim_prog_v1';
+let prog, st = newState(), sc = newScene(), running = true, lastRes = [], sel = null;
+const panel = { start: false, stop: false, estop: false, reset: false, auto: true };
+const DT = 0.05;
+
+function loadProg() {
+  try { const s = localStorage.getItem(LS_KEY); if (s) { const p = JSON.parse(s); if (Array.isArray(p) && p.length) return p; } } catch (e) {}
+  return EXAMPLES.sort.prog();
+}
+function saveProg() { try { localStorage.setItem(LS_KEY, JSON.stringify(prog)); } catch (e) {} }
+prog = loadProg();
+const HASH_EX = { 'bos': 'bos', 'ornek-1': 'seal', 'ornek-2': 'feed', 'ornek-3': 'sort' };
+function loadFromHash() {
+  const k = HASH_EX[location.hash.slice(1)];
+  if (k) { prog = EXAMPLES[k].prog(); st = newState(); sc = newScene(); sel = null; saveProg(); return true; }
+  return false;
+}
+loadFromHash();
+window.addEventListener('hashchange', () => { if (loadFromHash()) renderAll(); });
+
+// ===== ÖRNEK SEÇİCİ =====
+const exSel = document.getElementById('exSel');
+exSel.innerHTML = '<option value="">Örnek program yükle…</option>' + Object.entries(EXAMPLES).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
+exSel.onchange = () => { if (!exSel.value) return; prog = EXAMPLES[exSel.value].prog(); st = newState(); sc = newScene(); sel = null; exSel.value = ''; saveProg(); renderAll(); };
+
+// ===== PALET =====
+const PAL = [
+  ['NO', '-| |-', 'Normalde açık kontak'], ['NC', '-|/|-', 'Normalde kapalı kontak'], ['P', '-|P|-', 'Yükselen kenar'], ['N', '-|N|-', 'Düşen kenar'],
+  ['W', '——', 'Kablo (alt satırlarda boşluğu bağlar)'], ['TON', 'TON', 'Çekmede gecikmeli zamanlayıcı'], ['TOF', 'TOF', 'Bırakmada gecikmeli zamanlayıcı'], ['CTU', 'CTU', 'Yukarı sayıcı'],
+  ['OUT', '-( )-', 'Bobin'], ['S', '-(S)-', 'Set bobini'], ['R', '-(R)-', 'Reset bobini'], ['DEL', '✕ Sil', 'Hücreyi temizle'],
+];
+const palEl = document.getElementById('palette');
+palEl.innerHTML = PAL.map(([t, l, d]) => `<button data-t="${t}" title="${d}">${l}</button>`).join('');
+palEl.onclick = e => { const b = e.target.closest('button'); if (!b) return; applyType(b.dataset.t); };
+
+function defaultAddr(t) {
+  if (t === 'TON' || t === 'TOF') { for (let i = 0; i < 8; i++) if (!usedAddr('T' + i)) return 'T' + i; return 'T0'; }
+  if (t === 'CTU') { for (let i = 0; i < 4; i++) if (!usedAddr('C' + i)) return 'C' + i; return 'C0'; }
+  if (COILS.includes(t)) return 'Q0.0';
+  return 'I0.0';
+}
+function usedAddr(a) { return prog.some(r => r.cells.some(row => row.some(c => c && c.a === a && BLOCKS.includes(c.t)))); }
+
+function applyType(t) {
+  if (!sel) { flash('Önce ladder üzerinde bir hücre seç.'); return; }
+  const rung = prog[sel.ri]; if (!rung) return;
+  const isCoil = sel.c === L;
+  if (t === 'DEL') { if (isCoil) rung.coils[sel.r] = null; else rung.cells[sel.r][sel.c] = null; }
+  else if (isCoil) {
+    if (!COILS.includes(t)) { flash('Bobin sütununa sadece ( ), (S), (R) konur.'); return; }
+    const old = rung.coils[sel.r]; rung.coils[sel.r] = { t, a: old ? old.a : defaultAddr(t) };
+  } else {
+    if (COILS.includes(t)) { flash('Bobinler en sağdaki sütuna konur.'); return; }
+    const old = rung.cells[sel.r][sel.c];
+    if (t === 'W') rung.cells[sel.r][sel.c] = { t: 'W' };
+    else if (BLOCKS.includes(t)) {
+      const keep = old && BLOCKS.includes(old.t) && old.a[0] === (t === 'CTU' ? 'C' : 'T');
+      rung.cells[sel.r][sel.c] = { t, a: keep ? old.a : defaultAddr(t), pt: (old && old.pt) || 2, pv: (old && old.pv) || 5 };
+    } else {
+      const keepA = old && old.a && CONTACTS.includes(old.t) ? old.a : (lastAddr || 'I0.0');
+      rung.cells[sel.r][sel.c] = { t, a: keepA };
+    }
+  }
+  saveProg(); renderAll();
+}
+let lastAddr = 'I0.0';
+function flash(m) { const p = document.getElementById('props'); p.innerHTML = `<span style="color:var(--acc)">${m}</span>`; setTimeout(renderProps, 1600); }
+
+// ===== LADDER ÇİZİM =====
+const CW = 104, RH = 76, LEFT = 26, TOP = 40;
+const PWR = '#16a34a', OFF = '#5b6b7a';
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function lbl(a) { return a ? `${a}${SYM[a] ? ' ' + SYM[a] : ''}` : '???'; }
+
+function rungSVG(rung, ri, res) {
+  const rows = rung.cells.length, W = LEFT + (L + 1) * CW + 30, H = TOP + (rows - 1) * RH + 40;
+  const yc = r => TOP + r * RH;
+  const N = res ? res.N : null, info = res ? res.info : null;
+  const pc = (on) => (running && on) ? PWR : OFF;
+  let s = `<svg class="lad" width="${W}" height="${H}" data-ri="${ri}">`;
+  const RX = LEFT + (L + 1) * CW;
+  s += `<line x1="${LEFT}" y1="8" x2="${LEFT}" y2="${H - 8}" stroke="${pc(true)}" stroke-width="4"/>`;
+  s += `<line x1="${RX}" y1="8" x2="${RX}" y2="${H - 8}" stroke="${OFF}" stroke-width="4"/>`;
+  for (let r = 0; r < rows; r++) {
+    const y = yc(r), [wa, wb] = wireRange(rung, r);
+    for (let c = 0; c < L; c++) {
+      const x = LEFT + c * CW, cell = rung.cells[r][c], inf = info && info[r][c];
+      const pin = inf && inf.pin, pout = inf && inf.out;
+      const isSel = sel && sel.ri === ri && sel.r === r && sel.c === c;
+      if (isSel) s += `<rect x="${x + 2}" y="${y - 34}" width="${CW - 4}" height="${RH - 8}" fill="#dbeafe" stroke="#3b82f6" rx="4"/>`;
+      if (!cell) {
+        if (c >= wa && c < wb) s += `<line x1="${x}" y1="${y}" x2="${x + CW}" y2="${y}" stroke="${pc(pin)}" stroke-width="2.5"/>`;
+        else s += `<rect x="${x + 10}" y="${y - 12}" width="${CW - 20}" height="24" fill="none" stroke="#d5dde5" stroke-dasharray="3 3" rx="3"/>`;
+      } else if (cell.t === 'W') {
+        s += `<line x1="${x}" y1="${y}" x2="${x + CW}" y2="${y}" stroke="${pc(pin)}" stroke-width="2.5"/>`;
+      } else if (CONTACTS.includes(cell.t)) {
+        const cl = inf && inf.closed;
+        s += `<line x1="${x}" y1="${y}" x2="${x + 40}" y2="${y}" stroke="${pc(pin)}" stroke-width="2.5"/>`;
+        s += `<line x1="${x + 64}" y1="${y}" x2="${x + CW}" y2="${y}" stroke="${pc(pout)}" stroke-width="2.5"/>`;
+        if (running && cl) s += `<rect x="${x + 40}" y="${y - 13}" width="24" height="26" fill="#bbf7d0"/>`;
+        const bc = running && cl ? PWR : '#1c2833';
+        s += `<line x1="${x + 40}" y1="${y - 14}" x2="${x + 40}" y2="${y + 14}" stroke="${bc}" stroke-width="3"/>`;
+        s += `<line x1="${x + 64}" y1="${y - 14}" x2="${x + 64}" y2="${y + 14}" stroke="${bc}" stroke-width="3"/>`;
+        if (cell.t === 'NC') s += `<line x1="${x + 44}" y1="${y + 12}" x2="${x + 60}" y2="${y - 12}" stroke="${bc}" stroke-width="2"/>`;
+        if (cell.t === 'P' || cell.t === 'N') s += `<text x="${x + 52}" y="${y + 5}" font-size="13" font-weight="700" text-anchor="middle" fill="${bc}">${cell.t}</text>`;
+        s += `<text x="${x + 52}" y="${y - 20}" font-size="11.5" font-weight="700" text-anchor="middle" fill="#1c2833">${esc(cell.a)}</text>`;
+        s += `<text x="${x + 52}" y="${y + 28}" font-size="10" text-anchor="middle" fill="#5b6b7a">${esc(SYM[cell.a] || '')}</text>`;
+      } else if (BLOCKS.includes(cell.t)) {
+        s += `<line x1="${x}" y1="${y}" x2="${x + 14}" y2="${y}" stroke="${pc(pin)}" stroke-width="2.5"/>`;
+        s += `<line x1="${x + 90}" y1="${y}" x2="${x + CW}" y2="${y}" stroke="${pc(pout)}" stroke-width="2.5"/>`;
+        s += `<rect x="${x + 14}" y="${y - 28}" width="76" height="58" fill="${running && pout ? '#dcfce7' : '#fff'}" stroke="${running && pout ? PWR : '#1c2833'}" stroke-width="1.6" rx="3"/>`;
+        s += `<text x="${x + 52}" y="${y - 31}" font-size="11.5" font-weight="700" text-anchor="middle" fill="#1c2833">${esc(cell.a)}</text>`;
+        s += `<text x="${x + 52}" y="${y - 13}" font-size="12" font-weight="700" text-anchor="middle" fill="#1d4ed8">${cell.t}</text>`;
+        if (cell.t === 'CTU') {
+          const c0 = st.C[cell.a] || { cv: 0 };
+          s += `<text x="${x + 52}" y="${y + 4}" font-size="10.5" text-anchor="middle" fill="#1c2833">PV ${cell.pv}</text>`;
+          s += `<text x="${x + 52}" y="${y + 20}" font-size="10.5" text-anchor="middle" fill="#b45309">CV ${c0.cv}</text>`;
+        } else {
+          const t0 = st.T[cell.a] || { et: 0 };
+          s += `<text x="${x + 52}" y="${y + 4}" font-size="10.5" text-anchor="middle" fill="#1c2833">PT ${(+cell.pt).toFixed(1)} s</text>`;
+          s += `<text x="${x + 52}" y="${y + 20}" font-size="10.5" text-anchor="middle" fill="#b45309">ET ${(t0.et / 1000).toFixed(1)} s</text>`;
+        }
+      }
+      s += `<rect class="hit" data-ri="${ri}" data-r="${r}" data-c="${c}" x="${x}" y="${y - 34}" width="${CW}" height="${RH - 8}" fill="transparent" style="cursor:pointer"/>`;
+    }
+    // bobin sütunu
+    const x = LEFT + L * CW, coil = rung.coils[r], pin = N && N[r][L];
+    const isSel = sel && sel.ri === ri && sel.r === r && sel.c === L;
+    if (isSel) s += `<rect x="${x + 2}" y="${y - 34}" width="${CW - 4}" height="${RH - 8}" fill="#dbeafe" stroke="#3b82f6" rx="4"/>`;
+    if (coil) {
+      const on = running && pin && coil.t === 'OUT' || running && readBit(st, coil.a) && coil.t !== 'R' && coil.a[0] !== 'T' && coil.a[0] !== 'C';
+      s += `<line x1="${x}" y1="${y}" x2="${x + 38}" y2="${y}" stroke="${pc(pin)}" stroke-width="2.5"/>`;
+      s += `<line x1="${x + 66}" y1="${y}" x2="${RX}" y2="${y}" stroke="${OFF}" stroke-width="2.5"/>`;
+      const cc = on ? PWR : '#1c2833';
+      if (on) s += `<circle cx="${x + 52}" cy="${y}" r="13" fill="#bbf7d0"/>`;
+      s += `<path d="M${x + 44} ${y - 14} Q${x + 34} ${y} ${x + 44} ${y + 14}" fill="none" stroke="${cc}" stroke-width="2.5"/>`;
+      s += `<path d="M${x + 60} ${y - 14} Q${x + 70} ${y} ${x + 60} ${y + 14}" fill="none" stroke="${cc}" stroke-width="2.5"/>`;
+      if (coil.t !== 'OUT') s += `<text x="${x + 52}" y="${y + 5}" font-size="13" font-weight="700" text-anchor="middle" fill="${cc}">${coil.t}</text>`;
+      s += `<text x="${x + 52}" y="${y - 20}" font-size="11.5" font-weight="700" text-anchor="middle" fill="#1c2833">${esc(coil.a)}</text>`;
+      s += `<text x="${x + 52}" y="${y + 28}" font-size="10" text-anchor="middle" fill="#5b6b7a">${esc(SYM[coil.a] || '')}</text>`;
+    } else if (r === 0) {
+      s += `<line x1="${x}" y1="${y}" x2="${x + 20}" y2="${y}" stroke="${pc(pin)}" stroke-width="2.5"/>`;
+      s += `<rect x="${x + 22}" y="${y - 12}" width="60" height="24" fill="none" stroke="#d5dde5" stroke-dasharray="3 3" rx="3"/><text x="${x + 52}" y="${y + 4}" font-size="10" text-anchor="middle" fill="#9aa8b5">bobin</text>`;
+    } else {
+      s += `<rect x="${x + 22}" y="${y - 12}" width="60" height="24" fill="none" stroke="#d5dde5" stroke-dasharray="3 3" rx="3"/>`;
+    }
+    s += `<rect class="hit" data-ri="${ri}" data-r="${r}" data-c="${L}" x="${x}" y="${y - 34}" width="${CW}" height="${RH - 8}" fill="transparent" style="cursor:pointer"/>`;
+  }
+  // dikey bağlantılar
+  for (let r = 0; r < rows - 1; r++) for (let k = 0; k <= L; k++) {
+    const x = LEFT + k * CW, y1 = yc(r), y2 = yc(r + 1), on = hasLink(rung, k, r);
+    if (on) s += `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="${pc(N && N[r][k])}" stroke-width="2.5"/>`;
+    s += `<circle class="lnk" data-ri="${ri}" data-k="${k}" data-r="${r}" cx="${x}" cy="${(y1 + y2) / 2}" r="7" fill="${on ? '#3b82f6' : '#fff'}" stroke="#3b82f6" stroke-width="1.5" style="cursor:pointer" opacity="${on ? .9 : .55}"><title>Dikey bağlantı aç/kapa</title></circle>`;
+  }
+  return s + '</svg>';
+}
+
+const rungsEl = document.getElementById('rungs');
+function renderRungs(full) {
+  if (full || rungsEl.children.length !== prog.length) {
+    rungsEl.innerHTML = prog.map((r, i) => `<div class="rung"><div class="rhead"><b>Network ${i + 1}</b><input data-ri="${i}" class="cmt" value="${esc(r.comment || '')}" placeholder="Açıklama yaz…">
+      <button data-a="addrow" data-ri="${i}" title="Paralel satır ekle">＋Satır</button><button data-a="delrow" data-ri="${i}" title="Son satırı sil">－Satır</button>
+      <button data-a="up" data-ri="${i}">↑</button><button data-a="down" data-ri="${i}">↓</button><button data-a="dup" data-ri="${i}" title="Kopyala">⧉</button><button data-a="del" data-ri="${i}" title="Network sil">🗑</button></div>
+      <div class="svgw"></div></div>`).join('');
+  }
+  [...rungsEl.querySelectorAll('.svgw')].forEach((w, i) => { w.innerHTML = rungSVG(prog[i], i, lastRes[i]); });
+}
+rungsEl.addEventListener('pointerdown', e => {
+  if (e.button > 0) return;
+  const hit = e.target.closest('.hit'), lnk = e.target.closest('.lnk');
+  if (!hit && !lnk) return;
+  e.preventDefault();
+  if (lnk) {
+    const rung = prog[+lnk.dataset.ri], key = lnk.dataset.k + ':' + lnk.dataset.r;
+    const i = rung.links.indexOf(key); if (i >= 0) rung.links.splice(i, 1); else rung.links.push(key);
+    saveProg(); renderRungs(); return;
+  }
+  if (hit) { sel = { ri: +hit.dataset.ri, r: +hit.dataset.r, c: +hit.dataset.c }; renderRungs(); renderProps(); }
+});
+rungsEl.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-a]');
+  if (btn) {
+    const ri = +btn.dataset.ri, rung = prog[ri];
+    switch (btn.dataset.a) {
+      case 'addrow': if (rung.cells.length < 5) { rung.cells.push(Array(L).fill(null)); rung.coils.push(null); } break;
+      case 'delrow': if (rung.cells.length > 1) { const n = rung.cells.length - 1; rung.cells.pop(); rung.coils.pop(); rung.links = rung.links.filter(k => +k.split(':')[1] < n); } break;
+      case 'up': if (ri > 0) [prog[ri - 1], prog[ri]] = [prog[ri], prog[ri - 1]]; break;
+      case 'down': if (ri < prog.length - 1) [prog[ri + 1], prog[ri]] = [prog[ri], prog[ri + 1]]; break;
+      case 'dup': prog.splice(ri + 1, 0, JSON.parse(JSON.stringify(rung))); break;
+      case 'del': if (prog.length > 1) prog.splice(ri, 1); else prog[0] = newRung(); sel = null; break;
+    }
+    saveProg(); renderAll();
+  }
+});
+rungsEl.addEventListener('input', e => { if (e.target.classList.contains('cmt')) { prog[+e.target.dataset.ri].comment = e.target.value; saveProg(); } });
+document.getElementById('addRung').onclick = () => { prog.push(newRung()); sel = { ri: prog.length - 1, r: 0, c: 0 }; saveProg(); renderAll(); };
+
+// ===== ÖZELLİK PANELİ =====
+function addrOptions(kind, cur) {
+  const f = TAGLIST.filter(t => kind === 'T' ? t[0][0] === 'T' : kind === 'C' ? t[0][0] === 'C' : kind === 'coil' ? 'QMTC'.includes(t[0][0]) : true);
+  const groups = { I: 'Girişler (I)', Q: 'Çıkışlar (Q)', M: 'Hafıza (M)', T: 'Zamanlayıcı (T)', C: 'Sayıcı (C)' };
+  let h = ''; for (const g in groups) { const it = f.filter(t => t[0][0] === g); if (!it.length) continue;
+    h += `<optgroup label="${groups[g]}">` + it.map(t => `<option value="${t[0]}" ${t[0] === cur ? 'selected' : ''}>${t[0]}${t[1] ? ' – ' + t[1] : ''}</option>`).join('') + '</optgroup>'; }
+  return h;
+}
+function renderProps() {
+  const p = document.getElementById('props');
+  [...palEl.children].forEach(b => b.classList.remove('act'));
+  if (!sel || !prog[sel.ri]) { p.innerHTML = '<span class="pill">Ladder\'da bir hücreye tıkla.</span>'; return; }
+  const rung = prog[sel.ri], isCoil = sel.c === L, el = isCoil ? rung.coils[sel.r] : rung.cells[sel.r][sel.c];
+  let h = `<span class="pill">Network ${sel.ri + 1} · satır ${sel.r + 1} · ${isCoil ? 'bobin' : 'sütun ' + (sel.c + 1)}:</span>`;
+  if (!el) { h += `<span>Boş hücre. Yukarıdan ${isCoil ? '<b>-( )-</b>, <b>-(S)-</b> veya <b>-(R)-</b>' : 'bir kontak veya blok'} seç.</span>`; p.innerHTML = h; return; }
+  const b = palEl.querySelector(`[data-t="${el.t}"]`); if (b) b.classList.add('act');
+  const names = { NO: 'NO kontak', NC: 'NC kontak', P: 'Yükselen kenar (P)', N: 'Düşen kenar (N)', W: 'Kablo', TON: 'TON', TOF: 'TOF', CTU: 'CTU', OUT: 'Bobin ( )', S: 'Set (S)', R: 'Reset (R)' };
+  h += `<span class="nm">${names[el.t]}</span>`;
+  if (el.t !== 'W') {
+    const kind = (el.t === 'TON' || el.t === 'TOF') ? 'T' : el.t === 'CTU' ? 'C' : isCoil ? 'coil' : 'all';
+    h += `<label for="pA">Adres ▸</label><select id="pA">${addrOptions(kind, el.a)}</select>`;
+    const d = TAGLIST.find(t => t[0] === el.a); if (d) h += `<span class="pill">${d[2]}</span>`;
+  }
+  if (el.t === 'TON' || el.t === 'TOF') h += `<label for="pPT">PT (sn)</label><input id="pPT" type="number" min="0.1" step="0.1" value="${el.pt}">`;
+  if (el.t === 'CTU') h += `<label for="pPV">PV</label><input id="pPV" type="number" min="1" step="1" value="${el.pv}">`;
+  h += `<button id="pDel">✕ Sil</button>`;
+  p.innerHTML = h;
+  const pa = document.getElementById('pA'); if (pa) pa.onchange = () => { el.a = pa.value; if (CONTACTS.includes(el.t)) lastAddr = el.a; saveProg(); renderRungs(); renderProps(); };
+  const pt = document.getElementById('pPT'); if (pt) pt.oninput = () => { el.pt = Math.max(0.1, +pt.value || 0.1); saveProg(); };
+  const pv = document.getElementById('pPV'); if (pv) pv.oninput = () => { el.pv = Math.max(1, Math.round(+pv.value || 1)); saveProg(); };
+  document.getElementById('pDel').onclick = () => applyType('DEL');
+}
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input,select,textarea')) return;
+  if ((e.key === 'Delete' || e.key === 'Backspace') && sel) { e.preventDefault(); applyType('DEL'); }
+});
+
+// ===== DEĞİŞKEN TABLOSU =====
+const tagTbl = document.getElementById('tagTbl'), tcTbl = document.getElementById('tcTbl');
+const IO = TAGLIST.filter(t => t[0][0] === 'I' || t[0][0] === 'Q');
+tagTbl.innerHTML = IO.map(t => `<span class="ad">${t[0]}</span><span>${t[1]}</span><span class="led" data-a="${t[0]}"></span>`).join('');
+function renderTags() {
+  tagTbl.querySelectorAll('.led').forEach(l => l.classList.toggle('on', !!st.bits[l.dataset.a]));
+  const ms = TAGLIST.filter(t => t[0][0] === 'M' && st.bits[t[0]]).map(t => t[0]);
+  let h = `<div style="color:var(--mut)">M=1: ${ms.length ? ms.join(', ') : '—'}</div>`;
+  for (const a in st.T) h += `<div>${a}: ${(st.T[a].et / 1000).toFixed(1)}/${(st.T[a].pt / 1000).toFixed(1)} s  Q=${+st.T[a].q}</div>`;
+  for (const a in st.C) h += `<div>${a}: CV=${st.C[a].cv} PV=${st.C[a].pv}  Q=${+st.C[a].q}</div>`;
+  tcTbl.innerHTML = h;
+}
+
+// ===== PANEL BUTONLARI =====
+function mom(id, key) {
+  const el = document.getElementById(id);
+  const dn = e => { e.preventDefault(); panel[key] = true; el.classList.add('down'); };
+  const up = () => { if (panel[key]) { panel[key] = false; el.classList.remove('down'); } };
+  el.addEventListener('pointerdown', dn); el.addEventListener('pointerup', up); el.addEventListener('pointerleave', up); el.addEventListener('pointercancel', up);
+}
+mom('bStart', 'start'); mom('bStop', 'stop'); mom('bReset', 'reset');
+const bE = document.getElementById('bEstop');
+bE.onclick = () => { panel.estop = !panel.estop; bE.classList.toggle('down', panel.estop); };
+const bS = document.getElementById('bSel');
+bS.onclick = () => { panel.auto = !panel.auto; bS.classList.toggle('on', panel.auto); document.getElementById('selTxt').textContent = panel.auto ? 'OTO' : 'MAN'; };
+document.getElementById('addShort').onclick = () => spawnBox(sc, false);
+document.getElementById('addTall').onclick = () => spawnBox(sc, true);
+document.getElementById('clearScene').onclick = () => { sc = newScene(); };
+
+document.getElementById('runBtn').onclick = () => {
+  running = !running; const b = document.getElementById('runBtn');
+  b.textContent = running ? '▶ PLC RUN' : '■ PLC STOP'; b.classList.toggle('off', !running);
+  if (!running) for (const k in st.bits) if (k[0] === 'Q') st.bits[k] = false;
+};
+document.getElementById('resetMem').onclick = () => { st = newState(); };
+const modal = document.getElementById('modal'), ta = document.getElementById('jsonTa'), mMsg = document.getElementById('mMsg');
+document.getElementById('exportBtn').onclick = () => { ta.value = JSON.stringify(prog); mMsg.textContent = ''; modal.style.display = 'flex'; };
+document.getElementById('closeM').onclick = () => { modal.style.display = 'none'; };
+document.getElementById('copyBtn').onclick = async () => { try { await navigator.clipboard.writeText(ta.value); mMsg.textContent = 'Kopyalandı ✓'; } catch (e) { ta.select(); mMsg.textContent = 'Metni seçtim, Ctrl+C ile kopyala.'; } };
+function loadJSON(txt) {
+  try { const p = JSON.parse(txt); if (!Array.isArray(p) || !p.every(r => r.cells && r.coils)) throw 0; prog = p; st = newState(); sel = null; saveProg(); renderAll(); mMsg.textContent = 'Program yüklendi ✓'; }
+  catch (e) { mMsg.textContent = 'Okunamadı: bu simülatörden alınmış program metni olmalı.'; }
+}
+document.getElementById('loadBtn').onclick = () => loadJSON(ta.value);
+const fileIn = document.getElementById('fileIn');
+fileIn.onchange = async () => { const f = fileIn.files[0]; if (f) { const t = await f.text(); ta.value = t; loadJSON(t); } fileIn.value = ''; };
+
+// ===== SAHNE ÇİZİMİ =====
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+function setupCanvas() { const d = window.devicePixelRatio || 1; cv.width = 760 * d; cv.height = 300 * d; ctx.setTransform(d, 0, 0, d, 0, 0); }
+setupCanvas();
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
+function drawScene() {
+  const Q = a => running && !!st.bits[a], inp = sceneInputs(sc);
+  ctx.fillStyle = '#262e36'; ctx.fillRect(0, 0, 760, 300);
+  ctx.strokeStyle = '#2d363f'; ctx.lineWidth = 1;
+  for (let x = 0; x < 760; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 300); ctx.stroke(); }
+  for (let y = 0; y < 300; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(760, y); ctx.stroke(); }
+  const { x0, x1, y, h } = BELT;
+  // ayırma oluğu
+  ctx.fillStyle = '#3a4550'; rr(S_PUSH - 42, y + h, 84, 92, 4); ctx.fill();
+  ctx.fillStyle = '#1b5e3b'; rr(S_PUSH - 50, y + h + 80, 100, 36, 6); ctx.fill();
+  ctx.fillStyle = '#d1fae5'; ctx.font = '600 11px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText(`UZUN: ${sc.sorted}`, S_PUSH, y + h + 103);
+  // son kasası
+  ctx.fillStyle = '#1e3a5f'; rr(x1 + 4, y - 10, 58, h + 20, 6); ctx.fill();
+  ctx.fillStyle = '#dbeafe'; ctx.fillText('NORMAL', x1 + 33, y + h / 2 - 4); ctx.fillText(sc.normal, x1 + 33, y + h / 2 + 12);
+  // bant
+  ctx.fillStyle = '#596370'; rr(x0 - 8, y - 8, x1 - x0 + 16, h + 16, 8); ctx.fill();
+  ctx.fillStyle = '#1a1e23'; ctx.fillRect(x0, y, x1 - x0, h);
+  ctx.save(); ctx.beginPath(); ctx.rect(x0, y, x1 - x0, h); ctx.clip();
+  ctx.strokeStyle = '#2c333b'; ctx.lineWidth = 3;
+  const off = sc.phase % 24;
+  for (let x = x0 - 24 + off; x < x1 + 24; x += 24) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 10, y + h); ctx.stroke(); }
+  ctx.restore();
+  // motor
+  const mx = x1 - 80, my = y + h + 30;
+  ctx.fillStyle = Q('Q0.0') ? '#15803d' : '#4b5563'; rr(mx - 30, my - 16, 60, 32, 5); ctx.fill();
+  ctx.save(); ctx.translate(mx + 40, my); ctx.rotate(sc.motorAng);
+  ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 3; for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(10, 0); ctx.stroke(); }
+  ctx.restore(); ctx.fillStyle = '#fff'; ctx.font = '600 10px system-ui'; ctx.fillText('MOTOR Q0.0', mx, my + 4);
+  // besleyici
+  ctx.fillStyle = Q('Q0.2') ? '#b45309' : '#57534e'; rr(8, y - 4, 54, h + 8, 6); ctx.fill();
+  ctx.fillStyle = '#fef3c7'; ctx.font = '600 9px system-ui'; ctx.fillText('BESLEYİCİ', 35, y + h / 2 - 2); ctx.fillText('Q0.2', 35, y + h / 2 + 10);
+  // kutular
+  for (const b of sc.boxes) {
+    const by = boxTop(b); let alpha = 1; if (b.st === 'end') alpha = Math.max(0, 1 - b.t * 2); if (b.st === 'chute') alpha = Math.max(0, 1 - b.t * 1.3);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(b.x + (b.tall ? 7 : 4), by + (b.tall ? 7 : 4), BOX, BOX);
+    ctx.fillStyle = b.tall ? '#f97316' : '#c08a52'; ctx.fillRect(b.x, by, BOX, BOX);
+    ctx.strokeStyle = b.tall ? '#9a3412' : '#7c5631'; ctx.lineWidth = 2; ctx.strokeRect(b.x + 1, by + 1, BOX - 2, BOX - 2);
+    ctx.fillStyle = b.tall ? '#fff' : '#f5deb3'; ctx.font = '700 10px system-ui';
+    if (b.tall) { ctx.fillText('UZUN', b.x + BOX / 2, by + BOX / 2 + 4); }
+    else { ctx.fillRect(b.x + BOX / 2 - 3, by + 2, 6, BOX - 4); }
+    ctx.globalAlpha = 1;
+  }
+  // sensörler
+  const sensor = (x, on, name, addr, tallOnly) => {
+    ctx.fillStyle = '#9ca3af'; ctx.fillRect(x - 6, y - 26, 12, 14); ctx.fillRect(x - 6, y + h + 12, 12, 10);
+    ctx.strokeStyle = on ? '#ef4444' : (tallOnly ? 'rgba(250,204,21,.45)' : 'rgba(34,197,94,.45)'); ctx.lineWidth = on ? 3 : 2;
+    ctx.setLineDash(on ? [] : [4, 4]); ctx.beginPath(); ctx.moveTo(x, y - 12); ctx.lineTo(x, y + h + 12); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = on ? '#ef4444' : '#22c55e'; ctx.beginPath(); ctx.arc(x, y - 30, 4, 0, 7); ctx.fill();
+    ctx.fillStyle = '#cbd5e1'; ctx.font = '600 10px system-ui'; ctx.fillText(name, x, y - 48); ctx.fillStyle = '#8d9aa8'; ctx.fillText(addr, x, y - 37);
+  };
+  sensor(S_ENTRY, inp['I0.3'], 'GİRİŞ', 'I0.3'); sensor(S_HEIGHT, inp['I0.4'], 'YÜKSEKLİK', 'I0.4', true);
+  // piston
+  const hy = sc.headY != null ? sc.headY : y - 16;
+  ctx.fillStyle = '#64748b'; rr(S_PUSH - 18, 8, 36, 40, 4); ctx.fill();
+  ctx.fillStyle = '#cbd5e1'; ctx.fillRect(S_PUSH - 4, 48, 8, Math.max(0, hy - 12 - 48));
+  ctx.fillStyle = Q('Q0.1') ? '#2563eb' : '#94a3b8'; ctx.fillRect(S_PUSH - PUSH_HALF, hy - 12, PUSH_HALF * 2, 12);
+  ctx.fillStyle = '#fff'; ctx.font = '600 9px system-ui'; ctx.fillText('PİSTON', S_PUSH, 24); ctx.fillText('Q0.1', S_PUSH, 36);
+  const led = (x, yy, on, t) => { ctx.fillStyle = on ? '#22c55e' : '#3f4a55'; ctx.beginPath(); ctx.arc(x, yy, 5, 0, 7); ctx.fill(); ctx.fillStyle = '#8d9aa8'; ctx.textAlign = 'left'; ctx.fillText(t, x + 9, yy + 3); ctx.textAlign = 'center'; };
+  led(S_PUSH + 26, 16, inp['I0.7'], 'GERİ I0.7'); led(S_PUSH + 26, 34, inp['I0.6'], 'İLERİ I0.6');
+  // piston fotoseli (bandın altına yakın)
+  const ps = inp['I0.5'];
+  ctx.strokeStyle = ps ? '#ef4444' : 'rgba(34,197,94,.45)'; ctx.lineWidth = ps ? 3 : 2; ctx.setLineDash(ps ? [] : [4, 4]);
+  ctx.beginPath(); ctx.moveTo(S_PUSH, y + h + 12); ctx.lineTo(S_PUSH, y - 2); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = '#9ca3af'; ctx.fillRect(S_PUSH - 68, y + h + 10, 12, 10);
+  ctx.fillStyle = ps ? '#ef4444' : '#22c55e'; ctx.beginPath(); ctx.arc(S_PUSH - 62, y + h + 28, 4, 0, 7); ctx.fill();
+  ctx.fillStyle = '#8d9aa8'; ctx.font = '600 9px system-ui'; ctx.fillText('I0.5', S_PUSH - 62, y + h + 44); ctx.fillText('piston ekseni', S_PUSH - 62, y + h + 56);
+  // ışık kulesi
+  const tx = 730, cols = [['Q0.4', '#ef4444'], ['Q0.5', '#facc15'], ['Q0.3', '#22c55e']];
+  ctx.fillStyle = '#374151'; ctx.fillRect(tx - 3, 70, 6, 30);
+  cols.forEach(([a, c], i) => { ctx.fillStyle = Q(a) ? c : '#3a3f45'; if (Q(a)) { ctx.shadowColor = c; ctx.shadowBlur = 14; } rr(tx - 11, 8 + i * 20, 22, 18, 3); ctx.fill(); ctx.shadowBlur = 0; });
+  if (Q('Q0.6')) { ctx.fillStyle = '#facc15'; ctx.font = '700 13px system-ui'; ctx.fillText('🔊 KORNA', 660, 24); }
+  if (panel.estop) { ctx.fillStyle = 'rgba(239,68,68,.9)'; ctx.font = '700 13px system-ui'; ctx.fillText('ACİL STOP BASILI', 380, 290); }
+  if (!running) { ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0, 0, 760, 300); ctx.fillStyle = '#fca5a5'; ctx.font = '700 22px system-ui'; ctx.fillText('PLC STOP', 380, 160); }
+  document.getElementById('stats').innerHTML = `Ayrılan uzun: <b>${sc.sorted}</b> · Sona giden normal: <b>${sc.normal}</b> · <span style="color:#fca5a5">Yanlış itilen normal: <b>${sc.wrong}</b> · Kaçan uzun: <b>${sc.missed}</b></span>`;
+  ['lG:Q0.3', 'lY:Q0.5', 'lR:Q0.4'].forEach(s => { const [id, a] = s.split(':'); document.getElementById(id).classList.toggle('on', Q(a)); });
+}
+
+// ===== TARAMA DÖNGÜSÜ =====
+function tick() {
+  Object.assign(st.bits, sceneInputs(sc), { 'I0.0': panel.start, 'I0.1': !panel.stop, 'I0.2': !panel.estop, 'I1.0': panel.reset, 'I1.1': panel.auto });
+  const t0 = performance.now();
+  if (running) { try { lastRes = scan(prog, st, DT); } catch (e) { console.error(e); } }
+  const out = {}; for (const k in st.bits) if (k[0] === 'Q') out[k] = running && st.bits[k];
+  stepScene(sc, out, DT);
+  document.getElementById('scanInfo').textContent = `Tarama: 50 ms · işlem ${(performance.now() - t0).toFixed(2)} ms`;
+}
+let frame = 0;
+setInterval(() => { tick(); frame++; if (frame % 2 === 0) { renderRungs(); renderTags(); } }, DT * 1000);
+(function loop() { drawScene(); requestAnimationFrame(loop); })();
+function renderAll() { renderRungs(true); renderProps(); renderTags(); }
+renderAll();
+</script>
+</body>
+</html>
