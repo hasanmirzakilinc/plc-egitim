@@ -25,6 +25,7 @@ function renderRung(rung, res, st) {
         if (cl) s += `<rect x="${x + 40}" y="${y - 13}" width="24" height="26" fill="#bbf7d0"/>`;
         s += `<line x1="${x + 40}" y1="${y - 14}" x2="${x + 40}" y2="${y + 14}" stroke="${bc}" stroke-width="3"/><line x1="${x + 64}" y1="${y - 14}" x2="${x + 64}" y2="${y + 14}" stroke="${bc}" stroke-width="3"/>`;
         if (cell.t === 'NC') s += `<line x1="${x + 44}" y1="${y + 12}" x2="${x + 60}" y2="${y - 12}" stroke="${bc}" stroke-width="2"/>`;
+        if (cell.t === 'P' || cell.t === 'N') s += `<text x="${x + 52}" y="${y + 5}" font-size="14" font-weight="700" text-anchor="middle" fill="${bc}">${cell.t}</text>`;
         s += `<text x="${x + 52}" y="${y - 22}" font-size="13" font-weight="700" text-anchor="middle" fill="${INK}">${esc(cell.a)}</text>`;
         s += `<text x="${x + 52}" y="${y + 30}" font-size="11" text-anchor="middle" fill="#5b6b7a">${esc(SYM[cell.a] || '')}</text>`;
       } else if (BLOCKS.includes(cell.t)) {
