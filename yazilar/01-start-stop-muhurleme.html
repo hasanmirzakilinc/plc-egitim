@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Start-Stop Mühürleme – PLC Ladder</title>
+<meta name="description" content="PLC'ye sıfırdan başlayanlar için: START, STOP ve acil stop ile konveyörü çalıştıran mühürleme devresi. Yazının içindeki butonlara basarak ladder'ın nasıl çalıştığını canlı görün.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="strip"><div class="in"><a class="brand" href="../index.html">PLC Sahada</a><a href="../index.html">Yazılar</a><a href="../sim/index.html">Simülatör</a></div></div>
+
+<article class="wrap">
+<div class="meta">Yazı 1 · Hasan Mirza Kılınç · 25 Kasım 2026 · Okuma: ~15 dk</div>
+<h1>Start-Stop mühürleme: PLC'de ilk devre</h1>
+<p class="lead">Bir konveyör bandı START'a basınca dönsün, elini butondan çekince durmasın, STOP'a basınca dursun. Bu yazıda bu devreyi sıfırdan kuruyoruz. Daha önce hiç PLC görmemiş olman sorun değil.</p>
+
+<div class="note info"><b>Bu yazı nasıl okunur?</b> Mavi çerçeveli kutular canlı çalışıyor. İçindeki butonlara gerçekten basabilirsin. Basınca ladder'da enerjinin aktığı yerler <span class="on">yeşile</span> döner, motor döner. Okumakla yetinme, her kutuda butonlara bas.</div>
+
+<nav class="toc">
+<a href="#plc-nedir">1. PLC nedir</a><a href="#ladder-okuma">2. Ladder nasıl okunur</a><a href="#no-nc">3. NO ve NC</a><a href="#neden-nc">4. STOP neden NC</a><a href="#duz">5. İlk deneme</a><a href="#muhur">6. Mühür</a><a href="#tarama">7. Tarama</a><a href="#hata">8. Sık hata</a><a href="#dene">9. Kendin kur</a>
+</nav>
+
+<!-- 1 -->
+<div class="step" id="plc-nedir"><span class="n">1</span><h2>PLC ne yapar?</h2></div>
+<p>PLC, sahadaki butonlardan ve sensörlerden gelen bilgiyi okuyan, senin yazdığın programa göre karar veren ve motorları, lambaları çalıştıran bir bilgisayardır. Üç parçası var:</p>
+<div class="fig" style="background:#fff">
+<svg viewBox="0 0 720 230" width="100%" role="img" aria-label="Butonlar PLC girişine, PLC çıkışı kontaktöre, kontaktör motora bağlı">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#475569"/></marker></defs>
+<rect x="10" y="20" width="190" height="190" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+<text x="105" y="48" text-anchor="middle" font-size="16" font-weight="700" fill="#14532d">GİRİŞLER (I)</text>
+<circle cx="50" cy="90" r="18" fill="#16a34a" stroke="#4b5563" stroke-width="3"/><text x="80" y="95" font-size="14" fill="#14532d">START I0.0</text>
+<circle cx="50" cy="135" r="18" fill="#dc2626" stroke="#4b5563" stroke-width="3"/><text x="80" y="140" font-size="14" fill="#14532d">STOP I0.1</text>
+<circle cx="50" cy="180" r="18" fill="#dc2626" stroke="#facc15" stroke-width="5"/><text x="80" y="185" font-size="14" fill="#14532d">ACİL I0.2</text>
+<line x1="205" y1="115" x2="262" y2="115" stroke="#475569" stroke-width="3" marker-end="url(#ar)"/>
+<rect x="268" y="40" width="184" height="150" rx="12" fill="#dbeafe" stroke="#1240e0" stroke-width="2"/>
+<text x="360" y="72" text-anchor="middle" font-size="18" font-weight="700" fill="#0c1d6b">PLC</text>
+<text x="360" y="100" text-anchor="middle" font-size="13" fill="#1e3a8a">1. Girişleri oku</text>
+<text x="360" y="124" text-anchor="middle" font-size="13" fill="#1e3a8a">2. Programı çalıştır</text>
+<text x="360" y="148" text-anchor="middle" font-size="13" fill="#1e3a8a">3. Çıkışları yaz</text>
+<text x="360" y="174" text-anchor="middle" font-size="12" fill="#1e3a8a">saniyede onlarca kez</text>
+<line x1="456" y1="115" x2="512" y2="115" stroke="#475569" stroke-width="3" marker-end="url(#ar)"/>
+<rect x="518" y="20" width="192" height="190" rx="12" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+<text x="614" y="48" text-anchor="middle" font-size="16" font-weight="700" fill="#78350f">ÇIKIŞLAR (Q)</text>
+<rect x="540" y="78" width="60" height="64" rx="6" fill="#94a3b8"/><text x="570" y="115" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">K1</text>
+<text x="570" y="162" text-anchor="middle" font-size="12" fill="#78350f">Kontaktör</text>
+<circle cx="660" cy="110" r="30" fill="#16a34a"/><text x="660" y="116" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">M</text>
+<text x="660" y="162" text-anchor="middle" font-size="12" fill="#78350f">Motor Q0.0</text>
+<line x1="600" y1="110" x2="628" y2="110" stroke="#475569" stroke-width="2"/>
+</svg>
+</div>
+<p class="cap">Butonlar PLC'nin <b>giriş</b> klemenslerine (I), motor kontaktörü PLC'nin <b>çıkış</b> klemensine (Q) bağlı. PLC motoru doğrudan sürmez, kontaktörün bobinini çeker, motoru kontaktör çalıştırır.</p>
+
+<table>
+<tr><th>Adres</th><th>Sahadaki parça</th><th>Ne zaman 1 olur?</th></tr>
+<tr><td class="mono">I0.0</td><td>START butonu (NO)</td><td>Basılıyken</td></tr>
+<tr><td class="mono">I0.1</td><td>STOP butonu (NC)</td><td>Basılı <b>değilken</b></td></tr>
+<tr><td class="mono">I0.2</td><td>ACİL STOP (NC, kilitlenen)</td><td>Basılı <b>değilken</b></td></tr>
+<tr><td class="mono">Q0.0</td><td>Konveyör motoru kontaktörü</td><td>Program 1 yazınca bant döner</td></tr>
+</table>
+<p>PLC dünyasında her şey <b>1</b> ya da <b>0</b>dır. 1 = gerilim var / açık / çalışıyor, 0 = gerilim yok / kapalı / duruyor.</p>
+
+<!-- 2 -->
+<div class="step" id="ladder-okuma"><span class="n" style="--sc:#16a34a">2</span><h2>Ladder nasıl okunur?</h2></div>
+<p>Ladder (merdiven) diyagramı eski röle panolarının çizimine benzer. Okurken bir elektrik devresine bakıyormuş gibi düşün:</p>
+<div class="trio">
+<div class="t1"><b>Sol ray</b>Hep enerjili kabul edilen hat. Akım buradan çıkar ve soldan sağa doğru ilerler.</div>
+<div class="t2"><b>Kontak -| |-</b>Bir anahtar gibi. Kapalıysa akımı geçirir, açıksa keser. Üstündeki adres hangi girişe baktığını söyler.</div>
+<div class="t3"><b>Bobin -( )-</b>Akım buraya ulaşırsa çıkış 1 olur. Ulaşmazsa 0 olur. Motor ya da lamba gibi düşün.</div>
+</div>
+<p>En basit devre: START'a basınca motor dönsün.</p>
+<div id="w-oku"></div>
+
+<!-- 3 -->
+<div class="step" id="no-nc"><span class="n" style="--sc:#d97706">3</span><h2>NO ve NC: en çok karıştırılan konu</h2></div>
+<p>İki ayrı şeyi birbirinden ayırman lazım:</p>
+<ul>
+<li><b>Sahadaki buton</b> NO (normalde açık) ya da NC (normalde kapalı) olur. Bu, PLC girişine <b>1 mi 0 mı gideceğini</b> belirler.</li>
+<li><b>Programdaki kontak</b> NO <span class="mono">-| |-</span> ya da NC <span class="mono">-|/|-</span> olur. Bu, gelen 1'i ya da 0'ı <b>nasıl okuyacağını</b> belirler.</li>
+</ul>
+<table>
+<tr><th>Programdaki kontak</th><th>Giriş 1 ise</th><th>Giriş 0 ise</th></tr>
+<tr><td>NO <span class="mono">-| |-</span></td><td class="on">kapanır, akım geçer</td><td class="off">açık kalır</td></tr>
+<tr><td>NC <span class="mono">-|/|-</span></td><td class="off">açılır</td><td class="on">kapanır, akım geçer</td></tr>
+</table>
+<p>Aşağıda aynı STOP girişini (I0.1) iki farklı kontakla okuyoruz. STOP sahada NC bağlı, yani basılı değilken I0.1 = 1. STOP'a basıp bırakarak iki satırı karşılaştır:</p>
+<div id="w-nonc"></div>
+<div class="note tip"><b>Sonuç:</b> STOP'tan istediğimiz "normalde akım geçsin, basınca kessin". Bunu üstteki satır, yani <b>NO kontak</b> yapıyor. Kural: <b>NC bağlı buton programda NO kontakla okunur.</b></div>
+
+<!-- 4 -->
+<div class="step" id="neden-nc"><span class="n" style="--sc:#dc2626">4</span><h2>STOP neden NC bağlanır? Kanıtıyla</h2></div>
+<p>"Basınca 1 gelsin, NC kontakla okurum" da diyebilirsin. İki yol da masa başında aynı çalışır. Fark, kablo koptuğunda ortaya çıkar. İki devreyi de çalıştır, sonra <b>Kabloyu kes</b> butonuna bas ve STOP'u dene.</p>
+<h3>Doğru yol: STOP NC bağlı, NO kontakla okunuyor</h3>
+<div id="w-nc-dogru"></div>
+<h3>Yanlış yol: STOP NO bağlı, NC kontakla okunuyor</h3>
+<div id="w-nc-yanlis"></div>
+<div class="note err"><b>Ne gördün?</b> NC bağlı devrede kablo kopunca PLC bunu "STOP'a basıldı" diye görüyor ve bandı durduruyor. Arızayı hemen fark ediyorsun. NO bağlı devrede kablo kopunca hiçbir şey olmuyor, bant dönmeye devam ediyor. Asıl tehlike sonra: STOP'a basınca <b>bant durmuyor</b>. Buna "fail-safe" denir: bir şey bozulursa makine güvenli tarafa, yani durmaya düşmeli.</div>
+
+<!-- 5 -->
+<div class="step" id="duz"><span class="n" style="--sc:#7c3aed">5</span><h2>İlk deneme: üç kontak seri</h2></div>
+<p>START, STOP ve ACİL'i arka arkaya (seri) koyup motora bağlayalım. Seri bağlı kontaklarda akımın bobine ulaşması için <b>hepsinin birden</b> kapalı olması gerekir.</p>
+<div id="w-duz"></div>
+<div class="note warn"><b>Sorun:</b> START'a basılıyken bant dönüyor, elini çekince duruyor. Operatör bütün vardiya boyunca butona basılı tutamaz. Bobinin START bırakıldıktan sonra kendini tutması lazım.</div>
+
+<!-- 6 -->
+<div class="step" id="muhur"><span class="n" style="--sc:#16a34a">6</span><h2>Çözüm: mühür kontağı</h2></div>
+<p>START'ın etrafına paralel ikinci bir yol açıyoruz ve bu yola motorun kendi kontağını (<span class="mono">Q0.0</span>) koyuyoruz. Mantık şu:</p>
+<ol>
+<li>START'a basınca Q0.0 = 1 olur.</li>
+<li>Q0.0 = 1 olduğu için alttaki Q0.0 kontağı kapanır.</li>
+<li>START'ı bırakınca üstteki yol açılır, ama akım <b>alttaki yoldan</b> geçmeye devam eder. Bobin kendini tutar. Buna <b>mühürleme</b> denir.</li>
+<li>STOP'a basınca seri hat kesilir, Q0.0 = 0 olur, alttaki kontak da açılır. Mühür bozulur.</li>
+</ol>
+<div id="w-muhur"></div>
+<div class="note tip"><b>Dene:</b> START'a bas ve hemen bırak. Alt satırdaki Q0.0 kontağının yeşil yandığına bak. Sonra STOP'a bas, bırak. Bant tekrar kalkmıyor. Yeniden START gerekiyor. ACİL STOP'u da dene: kilitli kaldığı sürece START işe yaramaz.</div>
+
+<!-- 7 -->
+<div class="step" id="tarama"><span class="n" style="--sc:#7c3aed">7</span><h2>PLC bunu nasıl görüyor? Tarama tarama</h2></div>
+<p>PLC programı bir kere çalıştırıp bırakmaz. Sürekli döngü hâlinde baştan sona okur. Her tura <b>tarama</b> denir. Bizim simülatörde bir tarama 50 ms, gerçek PLC'lerde genelde 1–20 ms sürer. Önemli nokta: alttaki Q0.0 kontağı, Q0.0'ın <b>bir önceki taramadaki</b> değerini görür.</p>
+<p><b>Sonraki tarama</b> butonuna basarak devreyi adım adım ilerlet:</p>
+<div id="w-tarama"></div>
+
+<!-- 8 -->
+<div class="step" id="hata"><span class="n" style="--sc:#dc2626">8</span><h2>Sık yapılan hata: mühür dalını yanlış yere bağlamak</h2></div>
+<p>Paralel yolu START'ın değil, START ve STOP'un ikisinin birden etrafına bağlarsan mühür STOP'u da atlar. Aşağıdaki devrede bandı çalıştır, sonra STOP'a bas:</p>
+<div id="w-hata"></div>
+<div class="note err"><b>Ne oldu?</b> STOP kontağı açıldı ama akım alttaki yoldan dolaşıp bobine ulaştı. Bant durmadı. Sadece ACİL STOP durdurabiliyor. Kural: <b>mühür kontağı yalnızca START'a paralel bağlanır.</b> STOP ve ACİL her zaman ana hatta, seri kalır.</div>
+<p>İkinci sık hata da STOP'u NC kontakla <span class="mono">-|/|-</span> okumak. 3. bölümde gördüğün gibi o zaman her şey ters çalışır, bant ancak STOP'a basılıyken döner.</p>
+
+<div class="note warn"><b>Güvenlik notu:</b> Burada acil stop'u PLC girişi olarak okuyoruz, çünkü amaç programlamayı öğrenmek. Gerçek makinede acil stop sadece PLC'ye bağlanmaz. Güvenlik rölesi ya da güvenlik PLC'si üzerinden motorun enerjisini donanımla keser. PLC programı çökse bile makine durmalıdır.</div>
+
+<!-- 9 -->
+<div class="step" id="dene"><span class="n">9</span><h2>Şimdi sıra sende: devreyi kendin kur</h2></div>
+<p>Aşağıdaki simülatör boş programla açılıyor. Adımları takip et, kurduğun devreyle konveyör hattını çalıştır.</p>
+<ol>
+<li>Network 1'in <b>ilk hücresine</b> tıkla. Paletten <span class="mono">-| |-</span> seç. Altındaki <b>Adres ▸</b> listesinden <span class="mono">I0.0 – START</span> seç.</li>
+<li>2. hücreye <span class="mono">-| |-</span> koy, adresini <span class="mono">I0.1 – STOP</span> yap.</li>
+<li>3. hücreye <span class="mono">-| |-</span> koy, adresini <span class="mono">I0.2 – ACIL_STOP</span> yap.</li>
+<li>En sağdaki <b>bobin</b> hücresine tıkla, <span class="mono">-( )-</span> seç, adresini <span class="mono">Q0.0 – KONVEYOR</span> yap.</li>
+<li>Panelde START'a bas ve bırak. Bant duruyor mu? (5. bölümdeki sorun.)</li>
+<li>Network başlığındaki <b>＋Satır</b>'a bas. Alt satırın ilk hücresine <span class="mono">-| |-</span> koy, adresini <span class="mono">Q0.0</span> yap.</li>
+<li>İki satır arasındaki küçük noktalardan <b>en soldakine</b> ve <b>START ile STOP arasındakine</b> tıkla. İki dikey bağlantı oluşur.</li>
+<li>START'a bas, bırak. Bant dönmeye devam etmeli. STOP'u ve ACİL STOP'u dene.</li>
+</ol>
+<div class="iframe-wrap"><iframe src="../sim/index.html#bos" title="Ladder simülatörü" loading="lazy"></iframe></div>
+<p><a href="../sim/index.html#bos">Simülatörü tam ekran aç</a> · <a href="../sim/index.html#ornek-1">Hazır çözümü aç</a></p>
+
+<h2>Alıştırmalar</h2>
+<details><summary>1. Bant dönerken yeşil, dururken kırmızı lamba yansın</summary>
+<p>Yeni bir network aç. <span class="mono">Q0.0</span> NO kontağı → <span class="mono">Q0.3</span> bobini. Bir network daha: <span class="mono">Q0.0</span> NC kontağı → <span class="mono">Q0.4</span> bobini. Burada NC kontak doğru seçim, çünkü "Q0.0 0 iken" demek istiyoruz.</p></details>
+<details><summary>2. Acil stop basılıyken korna çalsın</summary>
+<p>İpucu: Acil stop NC bağlı. Basılıyken I0.2 = 0 olur. "0 iken" demek için NC kontak kullan: <span class="mono">I0.2</span> NC → <span class="mono">Q0.6</span>.</p></details>
+<details><summary>3. OTO/MAN anahtarı MAN'dayken bant çalışmasın</summary>
+<p>İpucu: Anahtar I1.1'de, OTO iken 1. Ana hatta bir NO kontak daha ekle: <span class="mono">I1.1</span>.</p></details>
+
+<h2>Özet</h2>
+<div class="sum">
+<div><b>Giriş / çıkış</b><br>Butonlar I'ya, motor Q'ya bağlı. Her şey 1 ya da 0.</div>
+<div><b>Seri = VE</b><br>Seri kontakların hepsi kapalıysa akım geçer.</div>
+<div><b>Paralel = VEYA</b><br>Paralel yollardan biri kapalıysa akım geçer.</div>
+<div><b>NC bağlı buton</b><br>Programda NO kontakla okunur. Kablo koparsa makine durur.</div>
+<div><b>Mühür</b><br>Q0.0 kontağı START'a paralel. STOP ve ACİL seri kalır.</div>
+<div><b>Tarama</b><br>PLC programı sürekli okur, mühür önceki taramanın Q0.0'ını görür.</div>
+</div>
+
+<h2>Sırada ne var?</h2>
+<p>Bir sonraki yazıda <b>Set/Reset bobinleri ve hafıza bitleri</b> var: yükseklik sensörü uzun kutuyu bir an görüyor, PLC bunu piston önüne gelene kadar nasıl hatırlıyor?</p>
+</article>
+
+<footer><div class="wrap">Hasan Mirza Kılınç · Elektrik-Elektronik Mühendisi · Simülatör Claude ile birlikte geliştirildi. Bu yazılar öğretim amaçlıdır; gerçek makinelerde güvenlik standartlarına ve üretici dokümanlarına uyun.</div></footer>
+
+<script src="../assets/engine.js"></script>
+<script src="../assets/live.js"></script>
+<script>
+{
+const NO = a => ({ t: 'NO', a }), NCk = a => ({ t: 'NC', a });
+function rung(row0, coil, row1, links) {
+  const r = newRung(); row0.forEach((c, i) => r.cells[0][i] = c); r.coils[0] = coil;
+  if (row1) { r.cells.push(Array(L).fill(null)); r.coils.push(null); row1.forEach((c, i) => r.cells[1][i] = c); r.links = links; }
+  return r;
+}
+const Q = a => ({ t: 'OUT', a });
+const START = { id: 's', label: 'START', color: 'g' }, STOP = { id: 'p', label: 'STOP', color: 'r' }, ACIL = { id: 'e', label: 'ACİL STOP', color: 'y', kind: 'toggle' };
+const CUT = { id: 'cut', label: 'Kabloyu kes', color: 'k', kind: 'toggle' };
+const motor = [{ addr: 'Q0.0', kind: 'motor' }];
+const stdMap = c => ({ 'I0.0': c.s, 'I0.1': !c.p, 'I0.2': !c.e });
+const W = ['I0.0', 'I0.1', 'I0.2', 'Q0.0'];
+
+liveRung(document.getElementById('w-oku'), {
+  rungs: () => [rung([NO('I0.0')], Q('Q0.0'))], controls: [START], outputs: motor, watch: ['I0.0', 'Q0.0'],
+  map: c => ({ 'I0.0': c.s }), hint: 'START\'a basılı tut: I0.0 = 1 olur, kontak kapanır, akım bobine ulaşır, Q0.0 = 1.'
+});
+
+SYM['Q0.3'] = 'NO ile'; SYM['Q0.4'] = 'NC ile';
+liveRung(document.getElementById('w-nonc'), {
+  rungs: () => [rung([NO('I0.1')], Q('Q0.3')), rung([NCk('I0.1')], Q('Q0.4'))], controls: [STOP],
+  outputs: [{ addr: 'Q0.3', label: 'NO kontak', color: '#22c55e' }, { addr: 'Q0.4', label: 'NC kontak', color: '#ef4444' }],
+  watch: ['I0.1'], map: c => ({ 'I0.1': !c.p }), hint: 'Basılı değilken I0.1 = 1: NO kontak kapalı, NC kontak açık. STOP\'a basınca tersine döner.'
+});
+
+const seal = () => rung([NO('I0.0'), NO('I0.1'), NO('I0.2')], Q('Q0.0'), [NO('Q0.0')], ['0:0', '1:0']);
+liveRung(document.getElementById('w-nc-dogru'), {
+  rungs: () => [seal()], controls: [START, STOP, CUT], outputs: motor, watch: ['I0.1', 'Q0.0'],
+  map: c => ({ 'I0.0': c.s, 'I0.1': !c.p && !c.cut, 'I0.2': true }), hint: 'Bandı çalıştır, sonra kabloyu kes.'
+});
+liveRung(document.getElementById('w-nc-yanlis'), {
+  rungs: () => [rung([NO('I0.0'), NCk('I0.1'), NO('I0.2')], Q('Q0.0'), [NO('Q0.0')], ['0:0', '1:0'])], controls: [START, STOP, CUT], outputs: motor, watch: ['I0.1', 'Q0.0'],
+  map: c => ({ 'I0.0': c.s, 'I0.1': c.p && !c.cut, 'I0.2': true }), hint: 'Bandı çalıştır, kabloyu kes, sonra STOP\'a bas.'
+});
+
+liveRung(document.getElementById('w-duz'), {
+  rungs: () => [rung([NO('I0.0'), NO('I0.1'), NO('I0.2')], Q('Q0.0'))], controls: [START, STOP, ACIL], outputs: motor, watch: W, map: stdMap,
+  hint: 'START\'a bas ve bırak. Sonra basılı tutup STOP\'a bas.'
+});
+liveRung(document.getElementById('w-muhur'), { rungs: () => [seal()], controls: [START, STOP, ACIL], outputs: motor, watch: W, map: stdMap });
+liveRung(document.getElementById('w-hata'), {
+  rungs: () => [rung([NO('I0.0'), NO('I0.1'), NO('I0.2')], Q('Q0.0'), [NO('Q0.0')], ['0:0', '2:0'])], controls: [START, STOP, ACIL], outputs: motor, watch: W, map: stdMap
+});
+
+const B = (s, p) => ({ 'I0.0': s, 'I0.1': p });
+scanStepper(document.getElementById('w-tarama'), {
+  rung: seal,
+  intro: 'Başlangıç: kimse butona basmıyor. STOP ve ACİL basılı olmadığı için I0.1 = 1, I0.2 = 1. Q0.0 = 0.',
+  seq: [
+    { label: 'Hiçbir şey', bits: B(false, true), text: 'START basılı değil, üst yol açık. Q0.0 önceden 0 olduğu için alttaki mühür kontağı da açık. Akım bobine ulaşmıyor: <b>Q0.0 = 0</b>.' },
+    { label: 'START\'a bastın', bits: B(true, true), text: 'I0.0 = 1, üst yol kapandı. STOP ve ACİL de kapalı. Akım bobine ulaştı: <b>Q0.0 = 1</b>. Bant dönmeye başladı.' },
+    { label: 'Hâlâ basılı', bits: B(true, true), text: 'Q0.0 artık 1 olduğu için alttaki mühür kontağı da kapandı. Akımın iki yolu var.' },
+    { label: 'START\'ı bıraktın', bits: B(false, true), text: 'Üst yol açıldı, ama akım alttaki Q0.0 kontağından geçiyor. <b>Q0.0 = 1</b> kalıyor. Mühür çalışıyor.' },
+    { label: 'STOP\'a bastın', bits: B(false, false), text: 'I0.1 = 0, STOP kontağı açıldı. Seri hat kesildi: <b>Q0.0 = 0</b>. Bant durdu.' },
+    { label: 'STOP\'u bıraktın', bits: B(false, true), text: 'STOP kapandı ama Q0.0 artık 0, mühür kontağı açık. START da basılı değil. Bant <b>kendiliğinden kalkmıyor</b>. Güvenli olan da bu.' },
+  ]
+});
+}
+</script>
+</body>
+</html>
