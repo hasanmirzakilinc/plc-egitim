@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>L Konveyör, Döner Platform ve Asansör – PLC Ladder</title>
-<meta name="description" content="Kendi yazdığım ladder programıyla L şeklinde konveyör, döner platform ve asansör hattı. Platformun neden titrediğini ve Set/Reset ile nasıl düzeldiğini 3D simülasyonda canlı izleyin.">
+<meta name="description" content="Kendi yazdığım ladder programıyla L şeklinde konveyör, döner platform ve asansör hattı. 3D simülasyonu ve canlı ladder'ı yan yana, istersen yavaş çekimde izle.">
 <meta property="og:type" content="article">
-<meta property="og:title" content="L konveyör, döner platform ve asansör: Set/Reset neden gerekli?">
-<meta property="og:description" content="Kendi ladder programım, bulduğumuz hata ve Set/Reset ile çözümü. 3D simülasyonda canlı izle.">
+<meta property="og:title" content="L konveyör, döner platform ve asansör: 3D simülasyon">
+<meta property="og:description" content="Kendi ladder programım. 3D simülasyon ve canlı ladder yan yana, yavaş çekimle izle.">
 <meta property="og:url" content="https://hasanmirzakilinc.github.io/plc-egitim/yazilar/02-l-hat-doner-platform-asansor.html">
 <meta property="og:image" content="https://hasanmirzakilinc.github.io/plc-egitim/assets/l-hat.png">
 <meta property="og:image:width" content="640">
@@ -17,23 +17,32 @@
 <link rel="stylesheet" href="../assets/style.css">
 <style>
 .lh{border:2px solid var(--cobt);border-radius:12px;overflow:hidden;margin:18px 0;background:var(--zone)}
+.lh-sim{min-width:0}
 .lh-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px}
-.lh-prog{display:flex;border:1.5px solid var(--cobt);border-radius:8px;overflow:hidden}
-.lh-prog button{border:0;background:transparent;color:var(--cobt);font:600 14px Inter,sans-serif;padding:10px 14px;min-height:44px;cursor:pointer}
-.lh-prog button.on{background:var(--cob);color:#fff}
+.lh-speed{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font:600 13px Inter,sans-serif;color:var(--mut)}
+.lh-speed span{margin-right:2px}
+.lh-speed button{border:1.5px solid var(--cobt);background:transparent;color:var(--cobt);font:600 13px Inter,sans-serif;padding:6px 10px;min-height:36px;border-radius:8px;cursor:pointer}
+.lh-speed button.on{background:var(--cob);border-color:var(--cob);color:#fff}
+.lh-speed button.lh-pause.on{background:#d97706;border-color:#d97706}
 .lh-hint{font-size:13px;color:var(--mut)}
-.lh-cv{display:block;width:100%;height:clamp(320px,56vw,520px);cursor:grab;touch-action:pan-y}
+.lh-cv{display:block;width:100%;height:clamp(300px,56vw,500px);cursor:grab;touch-action:pan-y}
 .lh-panel{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;padding:12px}
 .lh-btns{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .lh-btns .btn{margin:0;min-height:40px;padding:8px 12px;font-size:14px}
 .lh-auto{font-size:14px;display:flex;gap:6px;align-items:center;padding:0 6px}
 .lh-chips{padding:0 12px 12px}
-.lh-lad{margin:0 12px 12px;background:var(--bg)}
-.lh-cmt{font-size:13px;color:var(--mut);margin:10px 0 0}
+.lh-lad{background:var(--bg);border-top:2px solid var(--cobt);padding:10px 12px 12px;max-height:620px;overflow:auto}
+.lh-ladh{font:700 15px Inter,sans-serif;position:sticky;top:-10px;background:var(--bg);padding:4px 0 6px;z-index:1}
+.lh-ladh small{font-weight:400;color:var(--mut);margin-left:6px}
+.lh-cmt{font-size:12.5px;color:var(--mut);margin:10px 0 0;line-height:1.35}
 .lh-figs .fig{margin:4px 0 0}
-.lh-figs .fig svg,.fig[data-rung] svg{min-width:520px}
-.wide-fig{max-width:980px}
-@media(min-width:1100px){.lh{margin-inline:-110px}}
+.lh-figs .fig svg{width:auto;max-width:100%;height:auto;min-width:0;display:block}
+.fig[data-rung] svg{min-width:520px}
+/* Geniş ekranda simülasyon solda, ladder sağda: kaydırmadan ikisi birden görünür */
+@media(min-width:1000px){
+  .lh{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(330px,1fr);width:min(1360px,calc(100vw - 32px));margin-left:50%;transform:translateX(-50%)}
+  .lh-lad{border-top:0;border-left:2px solid var(--cobt);max-height:none;contain:size}
+}
 </style>
 </head>
 <body>
@@ -41,15 +50,15 @@
 
 <article class="wrap">
 <div class="meta">Yazı 2 · Hasan Mirza Kılınç · 26 Kasım 2026 · Okuma: ~12 dk</div>
-<h1>L konveyör, döner platform ve asansör: Set/Reset neden gerekli?</h1>
-<p class="lead">Bu yazıdaki ladder programını TIA Portal'da kendim yazdım. Ürün bir konveyörden gelir, döner platformda 90° çevrilir, ikinci konveyörle asansöre taşınır ve yukarı çıkar. Programın ilk hâlinde platform dönüşü tamamlayamıyordu. Hatanın nedenini ve Set/Reset ile nasıl çözüldüğünü aşağıdaki 3D simülasyonda kendi gözünle görebilirsin.</p>
+<h1>L konveyör, döner platform ve asansör</h1>
+<p class="lead">Bu yazıdaki ladder programını TIA Portal'da kendim yazdım. Ürün bir konveyörden gelir, döner platformda 90° çevrilir, ikinci konveyörle asansöre taşınır ve yukarı çıkar. Aşağıdaki 3D simülasyonda hattı çalıştırırken ladder'ın hangi satırının enerji aldığını aynı anda görebilirsin.</p>
 
-<div class="note info"><b>Simülasyon nasıl kullanılır?</b> START'a bas, bırak. Ürünler kendiliğinden gelir. Üstteki düğmeyle <b>programın ilk hâli</b> ile <b>Set/Reset ile düzeltilmiş</b> hâli arasında geçiş yapabilirsin. Sahneyi farenle ya da parmağınla sağa sola sürükleyerek çevirebilirsin. Altta ladder canlı çalışıyor: enerji akan yerler yeşile döner.</div>
+<div class="note info"><b>Simülasyon nasıl kullanılır?</b> START'a bas, bırak. Ürünler kendiliğinden gelir. Ladder simülasyonun yanında canlı çalışıyor (telefonda hemen altında): enerji akan yerler yeşile döner. Bir anı kaçırıyorsan üstteki <b>Hız</b> düğmeleriyle yavaş çekime al ya da <b>Durdur</b>'a bas. Sahneyi farenle ya da parmağınla sağa sola sürükleyerek çevirebilirsin.</div>
 
 <div class="lh" id="lhat"></div>
 
 <nav class="toc">
-<a href="#sira">1. Hat nasıl çalışmalı</a><a href="#etiketler">2. Giriş ve çıkışlar</a><a href="#networkler">3. Network network</a><a href="#hata">4. Hata: platform titriyor</a><a href="#cozum">5. Çözüm: Set/Reset</a><a href="#alistirma">6. Alıştırmalar</a>
+<a href="#sira">1. Hat nasıl çalışmalı</a><a href="#etiketler">2. Giriş ve çıkışlar</a><a href="#networkler">3. Network network</a><a href="#alistirma">4. Alıştırmalar</a>
 </nav>
 
 <div class="step" id="sira"><span class="n">1</span><h2>Hat nasıl çalışmalı?</h2></div>
@@ -99,9 +108,17 @@
 </ul>
 <p>Durdurma koşulları seri: <b>I0.6 NC</b> ürün limit sensörüne gelince durdurur, <b>Q1.1 NC</b> de Konveyör 2 çalışmaya başlayınca platformu durdurur, çünkü ürün artık Konveyör 2'dedir. Limit sensörü sabit olduğu için platform döndüğünde ürün sensörün önünden çıkar, I0.6 = 0 olur. Böylece dönüşten sonra I1.0 platformu tekrar ileri sürebilir.</p>
 
-<h3>Network 3: Platform döndür</h3>
-<div class="fig" data-rung="2" data-orig="1"></div>
-<p>İlk yazdığım hâli buydu: limit sensörü <b>veya</b> Sensör 2 ürünü görürken platform dönsün. Mantık doğru görünüyor ama burada bir tuzak var. Onu 4. bölümde açıyorum.</p>
+<h3>Network 3: Platform döndür (Set/Reset)</h3>
+<div class="fig" data-rung="2"></div>
+<div class="fig" data-rung="3"></div>
+<p>Dönüşün <b>ne zaman başlayacağını</b> ve <b>ne zaman biteceğini</b> iki ayrı satıra yazdım:</p>
+<ul>
+<li><b>Set (S):</b> Ürün limit sensörüne gelince (I0.6) Q1.3 = 1 olur ve <b>sensör ürünü kaybetse bile 1 kalır</b>. Limit sensörü sabit olduğu için platform döndükçe ürün sensörün önünden çıkar. Set sayesinde dönüş yarıda kesilmez, platform 90°'ye kadar gider.</li>
+<li><b>Reset (R):</b> Sensör 2'nin <b>düşen kenarı</b> (<span class="mono">-|N|-</span>): ürün Sensör 2'nin önünden tamamen çıktığı an Q1.3 = 0 olur, platform geri döner.</li>
+</ul>
+<p>Düşen kenar kullanmamın sebebi şu: istediğim şey "ürün Sensör 2'ye geldiğinde" değil, "ürün Sensör 2'den <b>çıktığında</b>" platformun geri dönmesi. Böylece ürün platformdan tamamen ayrılmadan platform dönmez.</p>
+<div class="note tip"><b>Simülasyonda izle:</b> Hızı <b>¼ yavaş</b>'a al. Ürün limit sensörüne gelince ladder'da Network 3a yeşil yanar, Q1.3 = 1 olur ve sensör sönse de 1 kalır. Platform 90°'ye varınca I1.0 yanar ve Network 2 ürünü Konveyör 2'ye verir.</div>
+<p>Bu yaklaşımı bir otomasyon ustasıyla da konuştum. Aynı şeyi söyledi: Set/Reset kullanınca sistem daha stabil çalışır. Başlama ve bitiş koşulu ayrı satırlarda durduğu için okuması ve arıza bulması da daha kolay.</p>
 
 <h3>Network 4: Konveyör 2</h3>
 <div class="fig" data-rung="4"></div>
@@ -115,32 +132,9 @@
 <div class="fig" data-rung="6"></div>
 <p>Kabindeki limit sensörü ürünü gördüğü sürece asansör yukarı çıkar. Sensör kabinin üstünde olduğu için ürünle birlikte yukarı gider ve ürün kabinde kaldıkça I0.7 = 1 kalır. Ürün üst kata alınınca I0.7 = 0 olur ve kabin aşağı iner.</p>
 
-<div class="step" id="hata"><span class="n" style="--sc:#dc2626">4</span><h2>Hata: platform titriyor, dönüş tamamlanmıyor</h2></div>
-<p>Simülasyonda üstteki düğmeden <b>Programın ilk hâli</b>'ni seç ve START'a bas. Ürün platforma geldiğinde platform dönmeye başlar, ama yaklaşık 84°'de ileri geri titrer ve dönüşü hiç tamamlayamaz. Ürün de platformda kalır. Adım adım olan şu:</p>
-<ol>
-<li>Ürün limit sensörüne gelir: <b>I0.6 = 1</b>, Network 3'te <b>Q1.3 = 1</b>, platform dönmeye başlar.</li>
-<li>Limit sensörü <b>sabit</b>. Platform döndükçe ürün sensörün önünden çıkar: <b>I0.6 = 0</b>.</li>
-<li>Ürün henüz Sensör 2'ye varmadığı için I0.4 de 0. Network 3'teki iki yolun ikisi de açık: <b>Q1.3 = 0</b>.</li>
-<li>Dönüş komutu kesildiği için platform geri dönmeye başlar. Ürün tekrar sensörün önüne gelir: I0.6 = 1, Q1.3 = 1…</li>
-</ol>
-<p>Sonuç: platform sensörün kenarında ileri geri gider. 90°'ye hiç ulaşamadığı için <b>I1.0 hiç gelmez</b>, Network 2 de ürünü Konveyör 2'ye veremez.</p>
-<div class="note err"><b>Öğrendiğim şey:</b> Sensör ürünü sadece <b>kısa bir an</b> görüyor, ama hareketin <b>daha uzun</b> sürmesi gerekiyor. Böyle durumlarda çıkışı doğrudan sensöre bağlarsan sensör ürünü kaybettiği an hareket de kesilir.</div>
+<div class="note warn"><b>Kontak tipleri hakkında bir not:</b> STOP ve ACİL butonları NC bağlıdır, yani basılmadıkça PLC girişi 1'dir. Bu yüzden ladder'da NO kontakla okunurlar (bkz. Yazı 1). Simülasyonda da öyle kurdum.</div>
 
-<div class="step" id="cozum"><span class="n" style="--sc:#16a34a">5</span><h2>Çözüm: Set/Reset</h2></div>
-<p>Dönüşün <b>ne zaman başlayacağını</b> ve <b>ne zaman biteceğini</b> iki ayrı satıra yazıyoruz:</p>
-<div class="fig" data-rung="2" data-fixed="1"></div>
-<div class="fig" data-rung="3" data-fixed="1"></div>
-<ul>
-<li><b>Set (S):</b> I0.6 bir kez 1 olunca Q1.3 = 1 olur ve <b>sensör ürünü kaybetse bile 1 kalır</b>.</li>
-<li><b>Reset (R):</b> Sensör 2'nin <b>düşen kenarı</b> (<span class="mono">-|N|-</span>): ürün Sensör 2'nin önünden tamamen çıktığı an Q1.3 = 0 olur, platform geri döner.</li>
-</ul>
-<p>Düşen kenar kullanmamın sebebi şu: istediğim şey "ürün Sensör 2'ye geldiğinde" değil, "ürün Sensör 2'den <b>çıktığında</b>" platformun geri dönmesi. Böylece ürün platformdan tamamen ayrılmadan platform dönmez.</p>
-<div class="note tip"><b>Dene:</b> Simülasyonda <b>Set/Reset ile düzeltilmiş</b>'i seç. Platform 90°'ye kadar döner, I1.0 yanar, ürün Konveyör 2'ye geçer ve asansörle yukarı çıkar. Sağ üstteki "Üst kat" sayacı artar.</div>
-<p>Bu yaklaşımı bir otomasyon ustasıyla da konuştum. Aynı şeyi söyledi: Set/Reset kullanınca sistem daha stabil çalışır. Mühürle de yapılabilir, ama Set/Reset'te başlama ve bitiş koşulu ayrı satırlarda durduğu için okuması ve arıza bulması daha kolay.</p>
-
-<div class="note warn"><b>Kontak tipleri hakkında bir not:</b> İlk yazdığımda STOP ve ACİL bazı network'lerde NC kontakla okunuyordu. NC bağlı bir butonda bu yanlış, butona basılmadıkça hat çalışmaz (bkz. Yazı 1). Simülasyonda bunları NO kontakla düzelttim ki iki program arasındaki tek fark Network 3 olsun.</div>
-
-<div class="step" id="alistirma"><span class="n">6</span><h2>Alıştırmalar</h2></div>
+<div class="step" id="alistirma"><span class="n">4</span><h2>Alıştırmalar</h2></div>
 <details><summary>1. İkinci ürün neden platformda bekliyor?</summary>
 <p>Simülasyonda dikkatli bakarsan, Konveyör 2 çalışırken gelen ikinci ürün platformun üstünde durur ve ancak arkadan üçüncü ürün Sensör 1'e gelince yoluna devam eder. Sebep Network 2'deki <span class="mono">Q1.1 NC</span>: Konveyör 2 çalışırken platform ileri hareketi kesilir ve mühür bozulur. Ürün Sensör 1'in önünden çoktan geçtiği için platformu tekrar başlatacak bir şey kalmaz. İpucu: platformun üstünde ürün olduğunu gösteren bir hafıza biti (M) kullan.</p></details>
 <details><summary>2. Platform dönükken Konveyör 1 beklesin</summary>
@@ -163,14 +157,9 @@
 <script>
 {
 const w = lhatWidget(document.getElementById('lhat'));
-const orig = LHAT.lhatProgram(false), fixed = LHAT.lhatProgram(true);
-// orijinal: 0..5 = N1,N2,N3,N4,N5,N6 · düzeltilmiş: 0..6 = N1,N2,N3a,N3b,N4,N5,N6
+const prog = LHAT.lhatProgram(true); // 0..6 = N1, N2, N3a, N3b, N4, N5, N6
 document.querySelectorAll('.fig[data-rung]').forEach(el => {
-  const i = +el.dataset.rung;
-  let r;
-  if (el.dataset.fixed) r = fixed[i];
-  else if (el.dataset.orig) r = orig[2];
-  else r = i <= 1 ? orig[i] : orig[i - 1];
+  const i = +el.dataset.rung, r = prog[i];
   const s = newState(); s.bits['I0.1'] = true; s.bits['I0.2'] = true;
   el.innerHTML = renderRung(r, evalRung(r, s, 0.05, 99 + i), s);
 });
