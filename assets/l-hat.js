@@ -265,27 +265,33 @@ function makeView(cv) {
 // ---------- SAYFA BİLEŞENİ ----------
 window.lhatWidget = function (root) {
   root.innerHTML = `
-  <div class="lh-bar">
-    <div class="lh-prog" role="group" aria-label="Program">
-      <button type="button" data-prog="0">Programın ilk hâli</button>
-      <button type="button" data-prog="1" class="on">Set/Reset ile düzeltilmiş</button>
+  <div class="lh-sim">
+    <div class="lh-bar">
+      <div class="lh-speed" role="group" aria-label="Simülasyon hızı">
+        <span>Hız:</span>
+        <button type="button" data-sp="1" class="on">Normal</button>
+        <button type="button" data-sp="0.5">½ yavaş</button>
+        <button type="button" data-sp="0.25">¼ yavaş</button>
+        <button type="button" data-sp="0.1">Çok yavaş</button>
+        <button type="button" data-sp="0" class="lh-pause">Durdur</button>
+      </div>
+      <span class="lh-hint">Sürükleyerek açıyı çevir</span>
     </div>
-    <span class="lh-hint">Sürükleyerek açıyı çevir</span>
-  </div>
-  <canvas class="lh-cv" aria-label="L konveyör hattının 3D simülasyonu"></canvas>
-  <div class="lh-panel">
-    <div class="ctls"></div>
-    <div class="lh-btns">
-      <button type="button" class="btn ghost" data-a="add">+ Ürün ekle</button>
-      <label class="lh-auto"><input type="checkbox" checked> Otomatik besleme</label>
-      <button type="button" class="btn ghost" data-a="reset">Sahneyi sıfırla</button>
-      <button type="button" class="btn ghost" data-a="view">Açıyı sıfırla</button>
+    <canvas class="lh-cv" aria-label="L konveyör hattının 3D simülasyonu"></canvas>
+    <div class="lh-panel">
+      <div class="ctls"></div>
+      <div class="lh-btns">
+        <button type="button" class="btn ghost" data-a="add">+ Ürün ekle</button>
+        <label class="lh-auto"><input type="checkbox" checked> Otomatik besleme</label>
+        <button type="button" class="btn ghost" data-a="reset">Sahneyi sıfırla</button>
+        <button type="button" class="btn ghost" data-a="view">Açıyı sıfırla</button>
+      </div>
     </div>
+    <div class="chips lh-chips"></div>
   </div>
-  <div class="chips lh-chips"></div>
-  <details class="lh-lad" open><summary>Canlı ladder (enerji akışı yeşil)</summary><div class="lh-figs"></div></details>`;
+  <div class="lh-lad"><div class="lh-ladh">Canlı ladder <small>enerji akan yer yeşil</small></div><div class="lh-figs"></div></div>`;
   const cv = root.querySelector('.lh-cv'), V3 = makeView(cv);
-  let fixed = true, prog = lhatProgram(true), st = newState(), sc = lhatScene(), res = [], ins = {}, out = {};
+  let prog = lhatProgram(true), st = newState(), sc = lhatScene(), res = [], ins = {}, out = {}, speed = 1;
   const ctl = { s: false, p: false, e: false };
   addItem(sc);
   const ctlEl = root.querySelector('.ctls');
@@ -300,13 +306,13 @@ window.lhatWidget = function (root) {
     ctlEl.appendChild(b);
   });
   const auto = root.querySelector('.lh-auto input');
-  function setProg(f) {
-    fixed = f; prog = lhatProgram(f); st = newState(); sc = lhatScene(); addItem(sc);
-    root.querySelectorAll('[data-prog]').forEach(b => b.classList.toggle('on', +b.dataset.prog === (f ? 1 : 0)));
+  function setSpeed(v) {
+    speed = v;
+    root.querySelectorAll('[data-sp]').forEach(b => b.classList.toggle('on', +b.dataset.sp === v));
   }
   root.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.prog) setProg(b.dataset.prog === '1');
+    if (b.dataset.sp != null) setSpeed(+b.dataset.sp);
     if (b.dataset.a === 'add') addItem(sc);
     if (b.dataset.a === 'reset') { st = newState(); sc = lhatScene(); addItem(sc); }
     if (b.dataset.a === 'view') { V3.view.yaw = -0.62; }
@@ -317,14 +323,17 @@ window.lhatWidget = function (root) {
   cv.addEventListener('pointerup', () => { drag = null; });
   const ro = new ResizeObserver(() => V3.resize()); ro.observe(cv);
   const DT = 0.05;
-  function tick() {
+  // Yavaş çekim: her gerçek adımda bir tarama yapılır, ama simülasyon zamanı hız kadar ilerler.
+  // Böylece yavaşta da hareket akıcı olur, durdurulmuşken de butonlar ladder'da görünür.
+  function scan(dt) {
     ins = lhatInputs(sc);
     Object.assign(st.bits, ins, { 'I0.0': ctl.s, 'I0.1': !ctl.p, 'I0.2': !ctl.e });
-    res = prog.map((r, i) => evalRung(r, st, DT, i));
+    res = prog.map((r, i) => evalRung(r, st, dt, i));
     out = {}; for (const k in st.bits) if (k[0] === 'Q') out[k] = st.bits[k];
-    lhatStep(sc, out, DT);
-    if (auto.checked && out['Q1.0']) { sc.feedT += DT; if (sc.feedT > 7) { if (addItem(sc)) sc.feedT = 0; } }
+    lhatStep(sc, out, dt);
+    if (auto.checked && out['Q1.0']) { sc.feedT += dt; if (sc.feedT > 7) { if (addItem(sc)) sc.feedT = 0; } }
   }
+  function tick() { scan(DT * speed); }
   const figs = root.querySelector('.lh-figs'), chips = root.querySelector('.lh-chips');
   const W = ['I0.3', 'I0.6', 'I1.0', 'I0.4', 'I0.5', 'I0.7', 'Q1.0', 'Q1.2', 'Q1.3', 'Q1.1', 'Q1.4', 'Q1.5'];
   function drawLadder() {
@@ -335,6 +344,6 @@ window.lhatWidget = function (root) {
   let n = 0;
   setInterval(() => { tick(); if (++n % 3 === 0) drawLadder(); }, DT * 1000);
   (function loop() { V3.render(sc, ins, out, true); requestAnimationFrame(loop); })();
-  return { get sc() { return sc; }, get st() { return st; }, setProg, ctl };
+  return { get sc() { return sc; }, get st() { return st; }, setSpeed, ctl };
 };
 }
